@@ -1,82 +1,92 @@
 /* =========================================================
-   QAYYUM OFFICIALZ GOLD TERMINAL
-   XAUUSD / XAUUSDT FOREX SIGNAL SYSTEM
-
+   QAYYUM OFFICIALZ — XAUUSD INTELLIGENCE
    JAVASCRIPT — PART 1
+   CORE ENGINE + LIVE GOLD PRICE + MARKET STATE
 
-   FOUNDATION
-   LIVE GOLD PRICE
-   MARKET CONNECTION
-   BASIC STATE
-   GOLD PIP SYSTEM
+   THEME:
+   BLACK / RED / GOLD
+
+   MARKET:
+   XAUUSDT
+
+   PIP MODEL:
+   $0.10 = 1 PIP
+   $1.00  = 10 PIPS
+
+   NOTE:
+   This is a market-analysis dashboard.
+   It does not place real orders automatically.
 ========================================================= */
 
 
 /* =========================================================
-   1. MAIN CONFIGURATION
+   1. GLOBAL CONFIGURATION
 ========================================================= */
 
-const CONFIG = {
+const APP_CONFIG = {
 
     symbol: "XAUUSDT",
 
     displaySymbol: "XAUUSD",
 
-    timeframe: "15m",
+    defaultTimeframe: "15m",
 
     candleLimit: 500,
 
-    websocketURL:
-        "wss://stream.binance.com:9443/ws/xauusdt@ticker",
-
-    apiURL:
+    restAPI:
         "https://api.binance.com/api/v3",
 
-    reconnectDelay: 3000
+    websocket:
+        "wss://stream.binance.com:9443/ws/xauusdt@ticker",
+
+    reconnectDelay: 3000,
+
+    priceRefreshFallback: 5000
 
 };
 
 
 /* =========================================================
-   2. GOLD PIP SYSTEM
-=========================================================
-
-   IMPORTANT:
-
-   For this project:
-
-   $1.00 MOVE = 10 PIPS
-
-   Therefore:
-
-   $0.10 MOVE = 1 PIP
-
-   Examples:
-
-   10 pips  = $1.00 move
-   20 pips  = $2.00 move
-   50 pips  = $5.00 move
-   100 pips = $10.00 move
-
+   2. GOLD PIP MODEL
 ========================================================= */
 
 const GOLD_PIP_SIZE = 0.10;
 
 
-/* Convert price movement to pips */
+/* =========================================================
+   PRICE -> PIPS
+========================================================= */
 
-function priceToPips(priceMove) {
+function priceToPips(priceDifference) {
 
-    return Number(priceMove) / GOLD_PIP_SIZE;
+    const value = Number(priceDifference);
+
+    if (!Number.isFinite(value)) {
+
+        return 0;
+
+    }
+
+    return Math.abs(value) / GOLD_PIP_SIZE;
 
 }
 
 
-/* Convert pips to price movement */
+/* =========================================================
+   PIPS -> PRICE
+========================================================= */
 
 function pipsToPrice(pips) {
 
-    return Number(pips) * GOLD_PIP_SIZE;
+    const value = Number(pips);
+
+    if (!Number.isFinite(value)) {
+
+        return 0;
+
+    }
+
+    return value * GOLD_PIP_SIZE;
 
 }
 
@@ -85,7 +95,9 @@ function pipsToPrice(pips) {
    3. APPLICATION STATE
 ========================================================= */
 
-const market = {
+const marketState = {
+
+    symbol: APP_CONFIG.symbol,
 
     price: null,
 
@@ -95,15 +107,27 @@ const market = {
 
     changePercent: 0,
 
+    bid: null,
+
+    ask: null,
+
+    spread: null,
+
     connected: false,
 
-    websocket: null,
+    socket: null,
 
     reconnectTimer: null,
 
+    fallbackTimer: null,
+
+    lastUpdate: null,
+
     candles: [],
 
-    lastUpdate: null
+    timeframe: APP_CONFIG.defaultTimeframe,
+
+    initialized: false
 
 };
 
@@ -138,47 +162,226 @@ const signalState = {
 
     tp3Pips: 0,
 
-    analysis: "Waiting for market analysis..."
+    riskReward: 0,
+
+    reason: "Waiting for market confirmation.",
+
+    timestamp: null
 
 };
 
 
 /* =========================================================
-   5. TRADE HISTORY
+   5. TECHNICAL STATE
 ========================================================= */
 
-let tradeHistory = JSON.parse(
+const technicalState = {
 
-    localStorage.getItem(
-        "qayyum_gold_trade_history"
-    )
+    rsi: null,
 
-) || [];
+    ema9: null,
+
+    ema20: null,
+
+    ema50: null,
+
+    ema200: null,
+
+    macd: null,
+
+    macdSignal: null,
+
+    macdHistogram: null,
+
+    atr: null,
+
+    adx: null,
+
+    vwap: null,
+
+    support: null,
+
+    resistance: null,
+
+    trend: "NEUTRAL",
+
+    momentum: "NEUTRAL",
+
+    volatility: "NORMAL",
+
+    structure: "NEUTRAL",
+
+    pattern: "NONE"
+
+};
 
 
 /* =========================================================
-   6. PERFORMANCE DATA
+   6. PERFORMANCE STATE
 ========================================================= */
 
-let performance = JSON.parse(
-
-    localStorage.getItem(
-        "qayyum_gold_performance"
-    )
-
-) || {
+const performanceState = {
 
     totalSignals: 0,
 
     wins: 0,
 
-    losses: 0
+    losses: 0,
+
+    breakeven: 0,
+
+    winRate: 0,
+
+    profit: 0,
+
+    loss: 0
 
 };
 
 
 /* =========================================================
-   7. DOM HELPER
+   7. TRADE HISTORY
+========================================================= */
+
+let tradeHistory = [];
+
+
+/* =========================================================
+   LOAD LOCAL STORAGE SAFELY
+========================================================= */
+
+function loadSavedData() {
+
+    try {
+
+        const savedHistory =
+            localStorage.getItem(
+                "qayyum_gold_trade_history"
+            );
+
+
+        const savedPerformance =
+            localStorage.getItem(
+                "qayyum_gold_performance"
+            );
+
+
+        if (savedHistory) {
+
+            const parsedHistory =
+                JSON.parse(savedHistory);
+
+
+            if (Array.isArray(parsedHistory)) {
+
+                tradeHistory =
+                    parsedHistory;
+
+            }
+
+        }
+
+
+        if (savedPerformance) {
+
+            const parsedPerformance =
+                JSON.parse(savedPerformance);
+
+
+            if (
+                parsedPerformance &&
+                typeof parsedPerformance === "object"
+            ) {
+
+                Object.assign(
+                    performanceState,
+                    parsedPerformance
+                );
+
+            }
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "Saved dashboard data could not be loaded:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SAVE TRADE HISTORY
+========================================================= */
+
+function saveTradeHistory() {
+
+    try {
+
+        localStorage.setItem(
+
+            "qayyum_gold_trade_history",
+
+            JSON.stringify(
+                tradeHistory
+            )
+
+        );
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "Trade history save failed:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SAVE PERFORMANCE
+========================================================= */
+
+function savePerformance() {
+
+    try {
+
+        localStorage.setItem(
+
+            "qayyum_gold_performance",
+
+            JSON.stringify(
+                performanceState
+            )
+
+        );
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "Performance save failed:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   8. DOM HELPERS
 ========================================================= */
 
 function getElement(id) {
@@ -189,7 +392,7 @@ function getElement(id) {
 
 
 /* =========================================================
-   8. SAFE TEXT UPDATE
+   SAFE TEXT UPDATE
 ========================================================= */
 
 function setText(id, value) {
@@ -197,34 +400,81 @@ function setText(id, value) {
     const element =
         getElement(id);
 
+
     if (!element) {
 
         return;
 
     }
 
-    element.textContent = value;
+
+    element.textContent =
+        value;
 
 }
 
 
 /* =========================================================
-   9. PRICE FORMAT
+   SAFE CLASS UPDATE
+========================================================= */
+
+function setClass(
+    id,
+    className
+) {
+
+    const element =
+        getElement(id);
+
+
+    if (!element) {
+
+        return;
+
+    }
+
+
+    element.className =
+        className;
+
+}
+
+
+/* =========================================================
+   9. NUMBER HELPERS
+========================================================= */
+
+function safeNumber(value) {
+
+    const number =
+        Number(value);
+
+
+    return Number.isFinite(number)
+        ? number
+        : null;
+
+}
+
+
+/* =========================================================
+   PRICE FORMAT
 ========================================================= */
 
 function formatPrice(price) {
 
-    if (
-        price === null ||
-        price === undefined ||
-        isNaN(price)
-    ) {
+    const value =
+        safeNumber(price);
+
+
+    if (value === null) {
 
         return "--";
 
     }
 
-    return Number(price).toLocaleString(
+
+    return value.toLocaleString(
         "en-US",
         {
 
@@ -239,72 +489,244 @@ function formatPrice(price) {
 
 
 /* =========================================================
-   10. UPDATE LIVE PRICE ON WEBSITE
+   PIP FORMAT
+========================================================= */
+
+function formatPips(pips) {
+
+    const value =
+        safeNumber(pips);
+
+
+    if (value === null) {
+
+        return "--";
+
+    }
+
+
+    return (
+        Math.round(value) +
+        " PIPS"
+    );
+
+}
+
+
+/* =========================================================
+   MONEY FORMAT
+========================================================= */
+
+function formatMoney(value) {
+
+    const number =
+        safeNumber(value);
+
+
+    if (number === null) {
+
+        return "--";
+
+    }
+
+
+    const sign =
+        number >= 0
+            ? ""
+            : "-";
+
+
+    return (
+        sign +
+        "$" +
+        Math.abs(number).toFixed(2)
+    );
+
+}
+
+
+/* =========================================================
+   PERCENT FORMAT
+========================================================= */
+
+function formatPercent(value) {
+
+    const number =
+        safeNumber(value);
+
+
+    if (number === null) {
+
+        return "--";
+
+    }
+
+
+    return number.toFixed(2) + "%";
+
+}
+
+
+/* =========================================================
+   10. CONNECTION STATUS
+========================================================= */
+
+function updateConnectionStatus(
+    connected
+) {
+
+    marketState.connected =
+        Boolean(connected);
+
+
+    const textElement =
+        getElement(
+            "market-status-text"
+        );
+
+
+    const statusElement =
+        getElement(
+            "connection-status"
+        );
+
+
+    if (connected) {
+
+        if (textElement) {
+
+            textElement.textContent =
+                "MARKET LIVE";
+
+        }
+
+
+        if (statusElement) {
+
+            statusElement.textContent =
+                "LIVE";
+
+            statusElement.classList.remove(
+                "offline"
+            );
+
+            statusElement.classList.add(
+                "online"
+            );
+
+        }
+
+    }
+
+    else {
+
+        if (textElement) {
+
+            textElement.textContent =
+                "MARKET OFFLINE";
+
+        }
+
+
+        if (statusElement) {
+
+            statusElement.textContent =
+                "OFFLINE";
+
+            statusElement.classList.remove(
+                "online"
+            );
+
+            statusElement.classList.add(
+                "offline"
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   11. UPDATE LIVE PRICE
 ========================================================= */
 
 function updateLivePrice(price) {
 
-    price = Number(price);
+    const value =
+        safeNumber(price);
 
-    if (!Number.isFinite(price)) {
+
+    if (value === null) {
 
         return;
 
     }
 
 
-    market.previousPrice =
-        market.price;
+    marketState.previousPrice =
+        marketState.price;
 
-    market.price =
-        price;
 
-    market.lastUpdate =
+    marketState.price =
+        value;
+
+
+    marketState.lastUpdate =
         new Date();
 
 
-    /* Main live price */
+    /* -----------------------------------------
+       Main price
+    ----------------------------------------- */
 
     setText(
         "gold-price",
-        "$" + formatPrice(price)
+        "$" + formatPrice(value)
     );
 
 
-    /* Alternative IDs */
+    /* -----------------------------------------
+       Alternative IDs
+    ----------------------------------------- */
 
     setText(
         "xau-price",
-        "$" + formatPrice(price)
+        "$" + formatPrice(value)
     );
+
 
     setText(
         "live-price",
-        "$" + formatPrice(price)
+        "$" + formatPrice(value)
     );
 
 
-    /* Price movement */
+    /* -----------------------------------------
+       Calculate tick-to-tick movement
+    ----------------------------------------- */
 
     if (
-        market.previousPrice !== null
+        marketState.previousPrice !== null
     ) {
 
-        market.change =
-            market.price -
-            market.previousPrice;
+        marketState.change =
+            value -
+            marketState.previousPrice;
 
 
         if (
-            market.previousPrice !== 0
+            marketState.previousPrice !== 0
         ) {
 
-            market.changePercent =
+            marketState.changePercent =
 
                 (
-                    market.change /
-                    market.previousPrice
-                ) * 100;
+                    marketState.change /
+                    marketState.previousPrice
+                ) *
+                100;
 
         }
 
@@ -313,25 +735,23 @@ function updateLivePrice(price) {
 
     updatePriceChange();
 
+    updateMarketMeta();
+
+    updatePriceTimestamp();
+
 }
 
 
 /* =========================================================
-   11. PRICE CHANGE DISPLAY
+   12. PRICE CHANGE
 ========================================================= */
 
 function updatePriceChange() {
 
-    const change =
-        market.change;
-
-
-    const percent =
-        market.changePercent;
-
-
     const element =
-        getElement("price-change");
+        getElement(
+            "gold-change"
+        );
 
 
     if (!element) {
@@ -339,6 +759,14 @@ function updatePriceChange() {
         return;
 
     }
+
+
+    const change =
+        marketState.change;
+
+
+    const percent =
+        marketState.changePercent;
 
 
     const sign =
@@ -358,6 +786,8 @@ function updatePriceChange() {
 
 
     element.classList.remove(
+        "up",
+        "down",
         "positive",
         "negative",
         "neutral"
@@ -367,7 +797,7 @@ function updatePriceChange() {
     if (change > 0) {
 
         element.classList.add(
-            "positive"
+            "up"
         );
 
     }
@@ -375,7 +805,7 @@ function updatePriceChange() {
     else if (change < 0) {
 
         element.classList.add(
-            "negative"
+            "down"
         );
 
     }
@@ -392,20 +822,82 @@ function updatePriceChange() {
 
 
 /* =========================================================
-   12. CONNECTION STATUS
+   13. MARKET META
 ========================================================= */
 
-function updateConnectionStatus(
-    connected
-) {
+function updateMarketMeta() {
 
-    market.connected =
-        connected;
+    setText(
+        "gold-bid",
+        marketState.bid !== null
+            ? formatPrice(marketState.bid)
+            : marketState.price !== null
+                ? formatPrice(marketState.price)
+                : "--"
+    );
 
+
+    setText(
+        "gold-ask",
+        marketState.ask !== null
+            ? formatPrice(marketState.ask)
+            : marketState.price !== null
+                ? formatPrice(marketState.price)
+                : "--"
+    );
+
+
+    setText(
+        "gold-spread",
+        marketState.spread !== null
+            ? marketState.spread.toFixed(2)
+            : "--"
+    );
+
+}
+
+
+/* =========================================================
+   14. PRICE TIMESTAMP
+========================================================= */
+
+function updatePriceTimestamp() {
+
+    if (
+        !marketState.lastUpdate
+    ) {
+
+        return;
+
+    }
+
+
+    const time =
+        marketState.lastUpdate.toLocaleTimeString(
+            "en-GB",
+            {
+                hour12: false
+            }
+        );
+
+
+    setText(
+        "price-updated",
+        time
+    );
+
+}
+
+
+/* =========================================================
+   15. MARKET SESSION
+========================================================= */
+
+function updateMarketSession() {
 
     const element =
         getElement(
-            "connection-status"
+            "market-session"
         );
 
 
@@ -416,501 +908,82 @@ function updateConnectionStatus(
     }
 
 
-    if (connected) {
+    const now =
+        new Date();
 
-        element.textContent =
-            "LIVE";
 
-        element.classList.remove(
-            "offline"
-        );
+    const hour =
+        now.getUTCHours();
 
-        element.classList.add(
-            "online"
-        );
+
+    let session =
+        "GLOBAL";
+
+
+    /*
+       Approximate forex session windows.
+       This is informational only.
+    */
+
+    if (
+        hour >= 0 &&
+        hour < 8
+    ) {
+
+        session =
+            "ASIA";
+
+    }
+
+    else if (
+        hour >= 8 &&
+        hour < 13
+    ) {
+
+        session =
+            "LONDON";
+
+    }
+
+    else if (
+        hour >= 13 &&
+        hour < 17
+    ) {
+
+        session =
+            "LONDON / NEW YORK";
+
+    }
+
+    else if (
+        hour >= 17 &&
+        hour < 22
+    ) {
+
+        session =
+            "NEW YORK";
 
     }
 
     else {
 
-        element.textContent =
-            "OFFLINE";
-
-        element.classList.remove(
-            "online"
-        );
-
-        element.classList.add(
-            "offline"
-        );
+        session =
+            "ASIA / PACIFIC";
 
     }
+
+
+    element.textContent =
+        session;
 
 }
 
 
 /* =========================================================
-   13. BINANCE GOLD WEBSOCKET
+   16. CLOCK
 ========================================================= */
 
-function startGoldWebSocket() {
-
-
-    console.log(
-        "Connecting to XAUUSDT live feed..."
-    );
-
-
-    updateConnectionStatus(
-        false
-    );
-
-
-    try {
-
-        const socket =
-            new WebSocket(
-                CONFIG.websocketURL
-            );
-
-
-        market.websocket =
-            socket;
-
-
-        /* -------------------------
-           CONNECTED
-        ------------------------- */
-
-        socket.onopen = function() {
-
-            console.log(
-                "XAUUSDT WebSocket connected."
-            );
-
-
-            updateConnectionStatus(
-                true
-            );
-
-        };
-
-
-        /* -------------------------
-           LIVE MESSAGE
-        ------------------------- */
-
-        socket.onmessage =
-            function(event) {
-
-                try {
-
-                    const data =
-                        JSON.parse(
-                            event.data
-                        );
-
-
-                    const price =
-                        Number(data.c);
-
-
-                    if (
-                        Number.isFinite(price)
-                    ) {
-
-                        updateLivePrice(
-                            price
-                        );
-
-                    }
-
-                }
-
-                catch(error) {
-
-                    console.error(
-                        "Price data error:",
-                        error
-                    );
-
-                }
-
-            };
-
-
-        /* -------------------------
-           ERROR
-        ------------------------- */
-
-        socket.onerror =
-            function(error) {
-
-                console.warn(
-                    "WebSocket error:",
-                    error
-                );
-
-
-                updateConnectionStatus(
-                    false
-                );
-
-            };
-
-
-        /* -------------------------
-           CLOSED
-        ------------------------- */
-
-        socket.onclose =
-            function() {
-
-                console.warn(
-                    "WebSocket disconnected."
-                );
-
-
-                updateConnectionStatus(
-                    false
-                );
-
-
-                reconnectGoldSocket();
-
-            };
-
-    }
-
-    catch(error) {
-
-        console.error(
-            "WebSocket startup error:",
-            error
-        );
-
-
-        reconnectGoldSocket();
-
-    }
-
-}
-
-
-/* =========================================================
-   14. WEBSOCKET RECONNECT
-========================================================= */
-
-function reconnectGoldSocket() {
-
-
-    if (
-        market.reconnectTimer
-    ) {
-
-        clearTimeout(
-            market.reconnectTimer
-        );
-
-    }
-
-
-    market.reconnectTimer =
-
-        setTimeout(
-            function() {
-
-                startGoldWebSocket();
-
-            },
-
-            CONFIG.reconnectDelay
-        );
-
-}
-
-
-/* =========================================================
-   15. REST FALLBACK PRICE
-=========================================================
-
-   WebSocket connect hone se pehle ek price
-   REST API se lene ki koshish hogi.
-
-========================================================= */
-
-async function getInitialGoldPrice() {
-
-    try {
-
-        const response =
-
-            await fetch(
-
-                CONFIG.apiURL +
-                "/ticker/price?symbol=" +
-                CONFIG.symbol
-
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "Price request failed"
-            );
-
-        }
-
-
-        const data =
-            await response.json();
-
-
-        const price =
-            Number(data.price);
-
-
-        if (
-            Number.isFinite(price)
-        ) {
-
-            updateLivePrice(
-                price
-            );
-
-        }
-
-    }
-
-    catch(error) {
-
-        console.warn(
-            "Initial gold price unavailable:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   16. PIP DISPLAY HELPER
-========================================================= */
-
-function formatPips(pips) {
-
-    if (
-        pips === null ||
-        pips === undefined ||
-        isNaN(pips)
-    ) {
-
-        return "--";
-
-    }
-
-
-    return (
-        Number(pips).toFixed(0) +
-        " PIPS"
-    );
-
-}
-
-
-/* =========================================================
-   17. CALCULATE SL FROM PIPS
-========================================================= */
-
-function calculateStopLoss(
-    entry,
-    direction,
-    pips
-) {
-
-    const movement =
-        pipsToPrice(pips);
-
-
-    if (
-        direction === "LONG"
-    ) {
-
-        return entry - movement;
-
-    }
-
-
-    if (
-        direction === "SHORT"
-    ) {
-
-        return entry + movement;
-
-    }
-
-
-    return null;
-
-}
-
-
-/* =========================================================
-   18. CALCULATE TAKE PROFIT FROM PIPS
-========================================================= */
-
-function calculateTakeProfit(
-    entry,
-    direction,
-    pips
-) {
-
-    const movement =
-        pipsToPrice(pips);
-
-
-    if (
-        direction === "LONG"
-    ) {
-
-        return entry + movement;
-
-    }
-
-
-    if (
-        direction === "SHORT"
-    ) {
-
-        return entry - movement;
-
-    }
-
-
-    return null;
-
-}
-
-
-/* =========================================================
-   19. LOT PROFIT CALCULATOR
-=========================================================
-
-   Gold standard contract assumption:
-
-   1 LOT = 100 OZ
-
-   Profit:
-
-   price movement × contract size × lot size
-
-   Example:
-
-   Gold moves $1
-
-   1.00 lot:
-   $1 × 100 × 1
-   = $100
-
-   0.01 lot:
-   $1 × 100 × 0.01
-   = $1
-
-   So:
-
-   $1 MOVE
-   0.01 LOT
-   = approximately $1
-
-   This is the basic calculation model.
-
-========================================================= */
-
-const GOLD_CONTRACT_SIZE =
-    100;
-
-
-function calculateLotProfit(
-    entry,
-    exit,
-    lotSize
-) {
-
-    const priceMove =
-        Math.abs(
-            Number(exit) -
-            Number(entry)
-        );
-
-
-    const lots =
-        Number(lotSize);
-
-
-    if (
-        !Number.isFinite(priceMove) ||
-        !Number.isFinite(lots)
-    ) {
-
-        return 0;
-
-    }
-
-
-    return (
-        priceMove *
-        GOLD_CONTRACT_SIZE *
-        lots
-    );
-
-}
-
-
-/* =========================================================
-   20. SAVE TRADE HISTORY
-========================================================= */
-
-function saveTradeHistory() {
-
-    localStorage.setItem(
-
-        "qayyum_gold_trade_history",
-
-        JSON.stringify(
-            tradeHistory
-        )
-
-    );
-
-}
-
-
-/* =========================================================
-   21. SAVE PERFORMANCE
-========================================================= */
-
-function savePerformance() {
-
-    localStorage.setItem(
-
-        "qayyum_gold_performance",
-
-        JSON.stringify(
-            performance
-        )
-
-    );
-
-}
-
-
-/* =========================================================
-   22. MARKET CLOCK
-========================================================= */
-
-function updateClock() {
+function updateMarketClock() {
 
     const element =
         getElement(
@@ -933,9 +1006,7 @@ function updateClock() {
         now.toLocaleTimeString(
             "en-GB",
             {
-
                 hour12: false
-
             }
         );
 
@@ -943,57 +1014,259 @@ function updateClock() {
 
 
 /* =========================================================
-   23. INITIALIZE
+   17. INITIAL REST PRICE
 ========================================================= */
 
-async function initializeGoldTerminal() {
+async function getInitialGoldPrice() {
 
-    console.log(
-        "Qayyum OfficialZ Gold Terminal"
-    );
+    try {
+
+        const response =
+            await fetch(
+
+                APP_CONFIG.restAPI +
+                "/ticker/price?symbol=" +
+                APP_CONFIG.symbol,
+
+                {
+                    method: "GET",
+
+                    cache: "no-store"
+                }
+
+            );
 
 
-    await getInitialGoldPrice();
+        if (!response.ok) {
+
+            throw new Error(
+                "REST price request failed: " +
+                response.status
+            );
+
+        }
 
 
-    startGoldWebSocket();
+        const data =
+            await response.json();
 
 
-    updateClock();
+        const price =
+            safeNumber(
+                data.price
+            );
+
+
+        if (price !== null) {
+
+            updateLivePrice(
+                price
+            );
+
+            return true;
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "Initial XAUUSDT price unavailable:",
+            error
+        );
+
+    }
+
+
+    return false;
 
 }
 
 
 /* =========================================================
-   24. CLOCK
+   18. BINANCE WEBSOCKET
 ========================================================= */
 
-setInterval(
-    updateClock,
-    1000
-);
+function startGoldWebSocket() {
 
+    /*
+       Prevent duplicate sockets.
+    */
 
-/* =========================================================
-   25. START APPLICATION
-========================================================= */
+    if (
+        marketState.socket &&
+        (
+            marketState.socket.readyState ===
+            WebSocket.OPEN ||
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function() {
+            marketState.socket.readyState ===
+            WebSocket.CONNECTING
+        )
+    ) {
 
-        initializeGoldTerminal();
+        return;
 
     }
-);
 
 
-/* =========================================================
-   END OF JAVASCRIPT PART 1
-========================================================= */
+    console.log(
+        "Connecting XAUUSDT WebSocket..."
+    );
 
 
+    updateConnectionStatus(
+        false
+    );
 
+
+    try {
+
+        const socket =
+            new WebSocket(
+                APP_CONFIG.websocket
+            );
+
+
+        marketState.socket =
+            socket;
+
+
+        /* -----------------------------------------
+           OPEN
+        ----------------------------------------- */
+
+        socket.onopen =
+            function() {
+
+                console.log(
+                    "XAUUSDT WebSocket connected."
+                );
+
+
+                updateConnectionStatus(
+                    true
+                );
+
+
+                stopPriceFallback();
+
+            };
+
+
+        /* -----------------------------------------
+           MESSAGE
+        ----------------------------------------- */
+
+        socket.onmessage =
+            function(event) {
+
+                try {
+
+                    const data =
+                        JSON.parse(
+                            event.data
+                        );
+
+
+                    /*
+                       Binance ticker:
+
+                       c = last price
+                       b = best bid
+                       a = best ask
+                    */
+
+                    const lastPrice =
+                        safeNumber(
+                            data.c
+                        );
+
+
+                    const bid =
+                        safeNumber(
+                            data.b
+                        );
+
+
+                    const ask =
+                        safeNumber(
+                            data.a
+                        );
+
+
+                    if (
+                        lastPrice !== null
+                    ) {
+
+                        updateLivePrice(
+                            lastPrice
+                        );
+
+                    }
+
+
+                    if (
+                        bid !== null
+                    ) {
+
+                        marketState.bid =
+                            bid;
+
+                    }
+
+
+                    if (
+                        ask !== null
+                    ) {
+
+                        marketState.ask =
+                            ask;
+
+                    }
+
+
+                    if (
+                        bid !== null &&
+                        ask !== null
+                    ) {
+
+                        marketState.spread =
+                            ask - bid;
+
+                    }
+
+
+                    updateMarketMeta();
+
+                }
+
+                catch (error) {
+
+                    console.error(
+                        "WebSocket data parsing error:",
+                        error
+                    );
+
+                }
+
+            };
+
+
+        /* -----------------------------------------
+           ERROR
+        ----------------------------------------- */
+
+        socket.onerror =
+            function(error) {
+
+                console.warn(
+                    "XAUUSDT WebSocket error.",
+                    error
+                );
+
+
+                updateCo
 
 
 
@@ -1001,461 +1274,643 @@ document.addEventListener(
    QAYYUM OFFICIALZ GOLD TERMINAL
    JAVASCRIPT — PART 2
 
-   MARKET DATA + ADVANCED INDICATOR ENGINE
+   ADVANCED GOLD TECHNICAL ENGINE
 
-   Indicators included:
+   Indicators:
+   - EMA 9 / 20 / 50 / 200
+   - RSI
+   - MACD
+   - ATR
+   - ADX
+   - VWAP
+   - Bollinger Bands
+   - Stochastic
+   - Momentum
+   - Volume analysis
 
-   1. EMA 9
-
+   Technical concepts:
+   - Trend
+   - Momentum
+   - Volatility
+   - Support / Resistance
+   - Market structure foundation
+========================================================= */
 
 
 /* =========================================================
-   XAUUSD PREMIUM SIGNAL ENGINE
-   JS PART 3
-   ========================================================= */
+   1. TECHNICAL CONFIGURATION
+========================================================= */
 
-/*
-   IMPORTANT XAUUSD RULE
+const TECH_CONFIG = {
 
-   $1.00 price movement = 10 pips
+    rsiPeriod: 14,
 
-   Example:
-   Entry 3340.00
-   TP    3344.00
+    emaFast: 9,
 
-   Price move = $4.00
-   Pips       = 40 pips
+    ema20: 20,
 
-   For 0.01 lot:
-   $1 move = approximately $1 profit
-   Therefore:
-   40 pips ($4 move) = approximately $4 profit
+    ema50: 50,
 
-   This project uses XAUUSD / GOLD logic.
-*/
+    ema200: 200,
 
+    macdFast: 12,
 
-// =========================================================
-// XAUUSD MARKET CONFIGURATION
-// =========================================================
+    macdSlow: 26,
 
-const GOLD_CONFIG = {
+    macdSignal: 9,
 
-    symbol: "XAUUSDT",
+    atrPeriod: 14,
 
-    displayName: "XAUUSD",
+    adxPeriod: 14,
 
-    pipSize: 0.10,
+    bollingerPeriod: 20,
 
-    dollarsPerOneDollarMoveAt001Lot: 1,
+    bollingerDeviation: 2,
 
-    minLot: 0.01,
+    stochasticPeriod: 14,
 
-    maxLot: 100,
+    stochasticSignal: 3,
 
-    defaultRiskPips: 35,
+    momentumPeriod: 10,
 
-    defaultRewardPips: 60,
+    volumePeriod: 20,
 
-    signalTimeframe: "15m",
-
-    analysisTimeframe: "5m",
-
-    higherTimeframe: "1h"
+    minimumCandles: 220
 
 };
 
 
+/* =========================================================
+   2. NUMBER HELPER
+========================================================= */
 
-// =========================================================
-// PRICE -> PIPS
-// =========================================================
+function toNumber(value) {
 
-function priceMoveToPips(priceMove) {
+    const number =
+        Number(value);
 
-    return Math.abs(priceMove) / GOLD_CONFIG.pipSize;
-
-}
-
-
-
-// =========================================================
-// PIPS -> PRICE MOVE
-// =========================================================
-
-function pipsToPriceMove(pips) {
-
-    return pips * GOLD_CONFIG.pipSize;
+    return Number.isFinite(number)
+        ? number
+        : 0;
 
 }
 
 
-
-// =========================================================
-// PIPS -> PROFIT
-// =========================================================
-
-function calculateGoldProfit(pips, lotSize) {
-
-    pips = Number(pips);
-    lotSize = Number(lotSize);
-
-    if (
-        !Number.isFinite(pips) ||
-        !Number.isFinite(lotSize) ||
-        pips <= 0 ||
-        lotSize <= 0
-    ) {
-
-        return 0;
-
-    }
-
-
-    /*
-       0.01 lot:
-
-       10 pips = $1
-
-       Therefore:
-
-       profit = pips × lot size × $10
-
-       Example:
-
-       40 pips × 0.01 × 10
-       = $4
-    */
-
-    return pips * lotSize * 10;
-
-}
-
-
-
-// =========================================================
-// PIPS -> LOSS
-// =========================================================
-
-function calculateGoldLoss(pips, lotSize) {
-
-    return calculateGoldProfit(pips, lotSize);
-
-}
-
-
-
-// =========================================================
-// ENTRY + PIPS -> LONG TP
-// =========================================================
-
-function calculateLongTarget(entry, pips) {
-
-    entry = Number(entry);
-    pips = Number(pips);
-
-    return entry + pipsToPriceMove(pips);
-
-}
-
-
-
-// =========================================================
-// ENTRY + PIPS -> LONG SL
-// =========================================================
-
-function calculateLongStop(entry, pips) {
-
-    entry = Number(entry);
-    pips = Number(pips);
-
-    return entry - pipsToPriceMove(pips);
-
-}
-
-
-
-// =========================================================
-// ENTRY + PIPS -> SHORT TP
-// =========================================================
-
-function calculateShortTarget(entry, pips) {
-
-    entry = Number(entry);
-    pips = Number(pips);
-
-    return entry - pipsToPriceMove(pips);
-
-}
-
-
-
-// =========================================================
-// ENTRY + PIPS -> SHORT SL
-// =========================================================
-
-function calculateShortStop(entry, pips) {
-
-    entry = Number(entry);
-    pips = Number(pips);
-
-    return entry + pipsToPriceMove(pips);
-
-}
-
-
-
-// =========================================================
-// GOLD PRICE FORMATTER
-// =========================================================
-
-function formatGoldPrice(price) {
-
-    price = Number(price);
-
-    if (!Number.isFinite(price)) {
-
-        return "--";
-
-    }
-
-    return price.toFixed(2);
-
-}
-
-
-
-// =========================================================
-// PIP FORMATTER
-// =========================================================
-
-function formatPips(pips) {
-
-    pips = Number(pips);
-
-    if (!Number.isFinite(pips)) {
-
-        return "--";
-
-    }
-
-    return Math.round(pips) + " pips";
-
-}
-
-
-
-// =========================================================
-// MONEY FORMATTER
-// =========================================================
-
-function formatMoney(value) {
-
-    value = Number(value);
-
-    if (!Number.isFinite(value)) {
-
-        return "--";
-
-    }
-
-    return "$" + value.toFixed(2);
-
-}
-
-
-
-// =========================================================
-// LOT SIZE SANITIZER
-// =========================================================
-
-function sanitizeLotSize(lot) {
-
-    lot = Number(lot);
-
-    if (!Number.isFinite(lot)) {
-
-        return GOLD_CONFIG.minLot;
-
-    }
-
-
-    if (lot < GOLD_CONFIG.minLot) {
-
-        lot = GOLD_CONFIG.minLot;
-
-    }
-
-
-    if (lot > GOLD_CONFIG.maxLot) {
-
-        lot = GOLD_CONFIG.maxLot;
-
-    }
-
-
-    return Math.round(lot * 100) / 100;
-
-}
-
-
-
-// =========================================================
-// GOLD TRADE CALCULATOR
-// =========================================================
-
-function calculateGoldTrade(entry, exit, lotSize, direction) {
-
-    entry = Number(entry);
-    exit = Number(exit);
-
-    lotSize = sanitizeLotSize(lotSize);
-
-
-    if (
-        !Number.isFinite(entry) ||
-        !Number.isFinite(exit)
-    ) {
-
-        return {
-
-            valid: false,
-
-            pips: 0,
-
-            profit: 0,
-
-            priceMove: 0
-
-        };
-
-    }
-
-
-    let priceMove;
-
-
-    if (direction === "LONG") {
-
-        priceMove = exit - entry;
-
-    }
-
-    else {
-
-        priceMove = entry - exit;
-
-    }
-
-
-    const pips = priceMoveToPips(priceMove);
-
-
-    const profit = calculateGoldProfit(
-        pips,
-        lotSize
+/* =========================================================
+   3. CLAMP VALUE
+========================================================= */
+
+function clamp(
+    value,
+    min,
+    max
+) {
+
+    return Math.min(
+        Math.max(value, min),
+        max
     );
 
+}
 
-    return {
 
-        valid: true,
+/* =========================================================
+   4. EXTRACT CLOSE PRICES
+========================================================= */
 
-        pips: pips,
+function getClosePrices(candles) {
 
-        profit: profit,
+    if (!Array.isArray(candles)) {
 
-        priceMove: priceMove,
+        return [];
 
-        lotSize: lotSize,
+    }
 
-        direction: direction
-
-    };
+    return candles.map(
+        candle => toNumber(
+            candle.close
+        )
+    );
 
 }
 
 
+/* =========================================================
+   5. EXTRACT HIGH PRICES
+========================================================= */
 
-// =========================================================
-// RISK / REWARD CALCULATOR
-// =========================================================
+function getHighPrices(candles) {
 
-function calculateRiskReward(
-    entry,
-    stopLoss,
-    takeProfit,
-    direction
+    if (!Array.isArray(candles)) {
+
+        return [];
+
+    }
+
+    return candles.map(
+        candle => toNumber(
+            candle.high
+        )
+    );
+
+}
+
+
+/* =========================================================
+   6. EXTRACT LOW PRICES
+========================================================= */
+
+function getLowPrices(candles) {
+
+    if (!Array.isArray(candles)) {
+
+        return [];
+
+    }
+
+    return candles.map(
+        candle => toNumber(
+            candle.low
+        )
+    );
+
+}
+
+
+/* =========================================================
+   7. EXTRACT VOLUME
+========================================================= */
+
+function getVolumes(candles) {
+
+    if (!Array.isArray(candles)) {
+
+        return [];
+
+    }
+
+    return candles.map(
+        candle => toNumber(
+            candle.volume
+        )
+    );
+
+}
+
+
+/* =========================================================
+   8. SIMPLE MOVING AVERAGE
+========================================================= */
+
+function calculateSMA(
+    values,
+    period
 ) {
 
-    entry = Number(entry);
-    stopLoss = Number(stopLoss);
-    takeProfit = Number(takeProfit);
-
-
     if (
-        !Number.isFinite(entry) ||
-        !Number.isFinite(stopLoss) ||
-        !Number.isFinite(takeProfit)
+        !Array.isArray(values) ||
+        values.length < period
     ) {
 
-        return 0;
+        return null;
 
     }
 
 
-    let risk;
-    let reward;
+    let sum = 0;
 
 
-    if (direction === "LONG") {
+    for (
+        let i = values.length - period;
+        i < values.length;
+        i++
+    ) {
 
-        risk = Math.abs(entry - stopLoss);
-
-        reward = Math.abs(takeProfit - entry);
-
-    }
-
-    else {
-
-        risk = Math.abs(stopLoss - entry);
-
-        reward = Math.abs(entry - takeProfit);
+        sum +=
+            toNumber(values[i]);
 
     }
 
 
-    if (risk <= 0) {
-
-        return 0;
-
-    }
-
-
-    return reward / risk;
+    return sum / period;
 
 }
 
 
+/* =========================================================
+   9. EMA SERIES
+========================================================= */
 
-// =========================================================
-// ATR BASED STOP / TARGET
-// =========================================================
-
-function buildGoldLevels(
-    price,
-    atr,
-    direction
+function calculateEMASeries(
+    values,
+    period
 ) {
 
-    price = Number(price);
-    atr = Number(atr);
+    if (
+        !Array.isArray(values) ||
+        values.length < period
+    ) {
+
+        return [];
+
+    }
+
+
+    const multiplier =
+        2 / (period + 1);
+
+
+    const series = [];
+
+
+    let ema =
+        calculateSMA(
+            values.slice(0, period),
+            period
+        );
+
+
+    if (ema === null) {
+
+        return [];
+
+    }
+
+
+    series.push(ema);
+
+
+    for (
+        let i = period;
+        i < values.length;
+        i++
+    ) {
+
+        ema =
+            (
+                values[i] -
+                ema
+            ) *
+            multiplier +
+            ema;
+
+
+        series.push(ema);
+
+    }
+
+
+    return series;
+
+}
+
+
+/* =========================================================
+   10. CURRENT EMA
+========================================================= */
+
+function calculateEMA(
+    values,
+    period
+) {
+
+    const series =
+        calculateEMASeries(
+            values,
+            period
+        );
+
+
+    if (!series.length) {
+
+        return null;
+
+    }
+
+
+    return series[
+        series.length - 1
+    ];
+
+}
+
+
+/* =========================================================
+   11. RSI
+========================================================= */
+
+function calculateRSI(
+    values,
+    period = 14
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length <= period
+    ) {
+
+        return null;
+
+    }
+
+
+    let gains = 0;
+
+    let losses = 0;
+
+
+    for (
+        let i = 1;
+        i <= period;
+        i++
+    ) {
+
+        const difference =
+            values[i] -
+            values[i - 1];
+
+
+        if (difference > 0) {
+
+            gains += difference;
+
+        }
+
+        else {
+
+            losses +=
+                Math.abs(difference);
+
+        }
+
+    }
+
+
+    let averageGain =
+        gains / period;
+
+
+    let averageLoss =
+        losses / period;
+
+
+    for (
+        let i = period + 1;
+        i < values.length;
+        i++
+    ) {
+
+        const difference =
+            values[i] -
+            values[i - 1];
+
+
+        const gain =
+            difference > 0
+                ? difference
+                : 0;
+
+
+        const loss =
+            difference < 0
+                ? Math.abs(difference)
+                : 0;
+
+
+        averageGain =
+            (
+                (
+                    averageGain *
+                    (period - 1)
+                ) +
+                gain
+            ) / period;
+
+
+        averageLoss =
+            (
+                (
+                    averageLoss *
+                    (period - 1)
+                ) +
+                loss
+            ) / period;
+
+    }
+
+
+    if (averageLoss === 0) {
+
+        return 100;
+
+    }
+
+
+    const relativeStrength =
+        averageGain /
+        averageLoss;
+
+
+    return (
+        100 -
+        (
+            100 /
+            (1 + relativeStrength)
+        )
+    );
+
+}
+
+
+/* =========================================================
+   12. TRUE RANGE
+========================================================= */
+
+function calculateTrueRange(
+    candles
+) {
+
+    if (
+        !Array.isArray(candles) ||
+        candles.length < 2
+    ) {
+
+        return [];
+
+    }
+
+
+    const result = [];
+
+
+    for (
+        let i = 1;
+        i < candles.length;
+        i++
+    ) {
+
+        const current =
+            candles[i];
+
+        const previous =
+            candles[i - 1];
+
+
+        const high =
+            toNumber(
+                current.high
+            );
+
+
+        const low =
+            toNumber(
+                current.low
+            );
+
+
+        const previousClose =
+            toNumber(
+                previous.close
+            );
+
+
+        const range1 =
+            high - low;
+
+
+        const range2 =
+            Math.abs(
+                high -
+                previousClose
+            );
+
+
+        const range3 =
+            Math.abs(
+                low -
+                previousClose
+            );
+
+
+        result.push(
+            Math.max(
+                range1,
+                range2,
+                range3
+            )
+        );
+
+    }
+
+
+    return result;
+
+}
+
+
+/* =========================================================
+   13. ATR
+========================================================= */
+
+function calculateATR(
+    candles,
+    period = 14
+) {
+
+    const trueRanges =
+        calculateTrueRange(
+            candles
+        );
 
 
     if (
-        !Number.isFinite(price) ||
-        !Number.isFinite(atr) ||
-        atr <= 0
+        trueRanges.length < period
+    ) {
+
+        return null;
+
+    }
+
+
+    let atr =
+        calculateSMA(
+            trueRanges.slice(
+                0,
+                period
+            ),
+            period
+        );
+
+
+    if (atr === null) {
+
+        return null;
+
+    }
+
+
+    for (
+        let i = period;
+        i < trueRanges.length;
+        i++
+    ) {
+
+        atr =
+            (
+                (
+                    atr *
+                    (period - 1)
+                ) +
+                trueRanges[i]
+            ) / period;
+
+    }
+
+
+    return atr;
+
+}
+
+
+/* =========================================================
+   14. MACD
+========================================================= */
+
+function calculateMACD(
+    values,
+    fastPeriod = 12,
+    slowPeriod = 26,
+    signalPeriod = 9
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length <
+        slowPeriod + signalPeriod
+    ) {
+
+        return null;
+
+    }
+
+
+    const fastSeries =
+        calculateEMASeries(
+            values,
+            fastPeriod
+        );
+
+
+    const slowSeries =
+        calculateEMASeries(
+            values,
+            slowPeriod
+        );
+
+
+    if (
+        !fastSeries.length ||
+        !slowSeries.length
     ) {
 
         return null;
@@ -1464,600 +1919,2314 @@ function buildGoldLevels(
 
 
     /*
-       We don't use an unnecessarily huge SL.
+       Align EMA series.
 
-       The signal engine is designed for shorter
-       intraday GOLD moves.
-
-       ATR determines market volatility.
-
-       SL = roughly 0.75 ATR
-       TP1 = roughly 1.15 ATR
-       TP2 = roughly 1.70 ATR
-       TP3 = roughly 2.25 ATR
+       Slow EMA starts later than
+       fast EMA, therefore remove
+       the extra fast values.
     */
 
-
-    const slDistance = atr * 0.75;
-
-    const tp1Distance = atr * 1.15;
-
-    const tp2Distance = atr * 1.70;
-
-    const tp3Distance = atr * 2.25;
+    const offset =
+        fastPeriod -
+        slowPeriod;
 
 
-    let sl;
-    let tp1;
-    let tp2;
-    let tp3;
+    const alignedFast =
+        offset < 0
+            ? fastSeries
+            : fastSeries.slice(
+                offset
+            );
 
 
-    if (direction === "LONG") {
+    const macdSeries = [];
 
-        sl = price - slDistance;
 
-        tp1 = price + tp1Distance;
+    const length =
+        Math.min(
+            alignedFast.length,
+            slowSeries.length
+        );
 
-        tp2 = price + tp2Distance;
 
-        tp3 = price + tp3Distance;
+    for (
+        let i = 0;
+        i < length;
+        i++
+    ) {
+
+        macdSeries.push(
+            alignedFast[i] -
+            slowSeries[i]
+        );
+
+    }
+
+
+    if (
+        macdSeries.length <
+        signalPeriod
+    ) {
+
+        return null;
 
     }
 
-    else {
 
-        sl = price + slDistance;
+    const signalSeries =
+        calculateEMASeries(
+            macdSeries,
+            signalPeriod
+        );
 
-        tp1 = price - tp1Distance;
 
-        tp2 = price - tp2Distance;
+    if (!signalSeries.length) {
 
-        tp3 = price - tp3Distance;
+        return null;
 
     }
+
+
+    const macd =
+        macdSeries[
+            macdSeries.length - 1
+        ];
+
+
+    const signal =
+        signalSeries[
+            signalSeries.length - 1
+        ];
+
+
+    const histogram =
+        macd - signal;
 
 
     return {
 
-        entry: price,
+        macd,
 
-        sl: sl,
+        signal,
 
-        tp1: tp1,
-
-        tp2: tp2,
-
-        tp3: tp3,
-
-        slPips: priceMoveToPips(slDistance),
-
-        tp1Pips: priceMoveToPips(tp1Distance),
-
-        tp2Pips: priceMoveToPips(tp2Distance),
-
-        tp3Pips: priceMoveToPips(tp3Distance)
+        histogram
 
     };
 
 }
 
 
+/* =========================================================
+   15. BOLLINGER BANDS
+========================================================= */
 
-// =========================================================
-// SIGNAL QUALITY FILTER
-// =========================================================
+function calculateBollingerBands(
+    values,
+    period = 20,
+    deviationMultiplier = 2
+) {
 
-function signalQualityScore(data) {
+    if (
+        !Array.isArray(values) ||
+        values.length < period
+    ) {
 
-    let score = 0;
+        return null;
+
+    }
 
 
-    if (!data) {
+    const recent =
+        values.slice(
+            values.length - period
+        );
+
+
+    const middle =
+        calculateSMA(
+            recent,
+            period
+        );
+
+
+    if (middle === null) {
+
+        return null;
+
+    }
+
+
+    let variance = 0;
+
+
+    for (
+        const value of recent
+    ) {
+
+        variance +=
+            Math.pow(
+                value - middle,
+                2
+            );
+
+    }
+
+
+    variance /=
+        period;
+
+
+    const standardDeviation =
+        Math.sqrt(
+            variance
+        );
+
+
+    const upper =
+        middle +
+        (
+            standardDeviation *
+            deviationMultiplier
+        );
+
+
+    const lower =
+        middle -
+        (
+            standardDeviation *
+            deviationMultiplier
+        );
+
+
+    const current =
+        values[
+            values.length - 1
+        ];
+
+
+    const bandwidth =
+        upper !== lower
+            ? (
+                (
+                    upper -
+                    lower
+                ) /
+                middle
+            ) * 100
+            : 0;
+
+
+    return {
+
+        middle,
+
+        upper,
+
+        lower,
+
+        bandwidth,
+
+        current
+
+    };
+
+}
+
+
+/* =========================================================
+   16. STOCHASTIC OSCILLATOR
+========================================================= */
+
+function calculateStochastic(
+    candles,
+    period = 14,
+    signalPeriod = 3
+) {
+
+    if (
+        !Array.isArray(candles) ||
+        candles.length < period
+    ) {
+
+        return null;
+
+    }
+
+
+    const recent =
+        candles.slice(
+            candles.length - period
+        );
+
+
+    let highest =
+        -Infinity;
+
+
+    let lowest =
+        Infinity;
+
+
+    for (
+        const candle of recent
+    ) {
+
+        highest =
+            Math.max(
+                highest,
+                toNumber(candle.high)
+            );
+
+
+        lowest =
+            Math.min(
+                lowest,
+                toNumber(candle.low)
+            );
+
+    }
+
+
+    const close =
+        toNumber(
+            candles[
+                candles.length - 1
+            ].close
+        );
+
+
+    if (
+        highest === lowest
+    ) {
+
+        return {
+
+            k: 50,
+
+            d: 50
+
+        };
+
+    }
+
+
+    const k =
+        (
+            (
+                close -
+                lowest
+            ) /
+            (
+                highest -
+                lowest
+            )
+        ) * 100;
+
+
+    /*
+       Approximate D line from
+       recent stochastic values.
+    */
+
+    const kValues = [];
+
+
+    const start =
+        Math.max(
+            0,
+            candles.length -
+            period -
+            signalPeriod +
+            1
+        );
+
+
+    for (
+        let i = start;
+        i < candles.length;
+        i++
+    ) {
+
+        const windowStart =
+            Math.max(
+                0,
+                i - period + 1
+            );
+
+
+        const window =
+            candles.slice(
+                windowStart,
+                i + 1
+            );
+
+
+        let high =
+            -Infinity;
+
+
+        let low =
+            Infinity;
+
+
+        for (
+            const candle of window
+        ) {
+
+            high =
+                Math.max(
+                    high,
+                    toNumber(
+                        candle.high
+                    )
+                );
+
+
+            low =
+                Math.min(
+                    low,
+                    toNumber(
+                        candle.low
+                    )
+                );
+
+        }
+
+
+        const c =
+            toNumber(
+                candles[i].close
+            );
+
+
+        const currentK =
+            high === low
+                ? 50
+                : (
+                    (
+                        c - low
+                    ) /
+                    (
+                        high - low
+                    )
+                ) * 100;
+
+
+        kValues.push(
+            currentK
+        );
+
+    }
+
+
+    const d =
+        kValues.length >= signalPeriod
+            ? calculateSMA(
+                kValues,
+                signalPeriod
+            )
+            : k;
+
+
+    return {
+
+        k,
+
+        d
+
+    };
+
+}
+
+
+/* =========================================================
+   17. MOMENTUM
+========================================================= */
+
+function calculateMomentum(
+    values,
+    period = 10
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length <= period
+    ) {
+
+        return null;
+
+    }
+
+
+    const current =
+        values[
+            values.length - 1
+        ];
+
+
+    const previous =
+        values[
+            values.length -
+            1 -
+            period
+        ];
+
+
+    return current - previous;
+
+}
+
+
+/* =========================================================
+   18. VWAP
+========================================================= */
+
+function calculateVWAP(
+    candles
+) {
+
+    if (
+        !Array.isArray(candles) ||
+        candles.length === 0
+    ) {
+
+        return null;
+
+    }
+
+
+    let cumulativePriceVolume = 0;
+
+    let cumulativeVolume = 0;
+
+
+    /*
+       For dashboard analysis,
+       calculate session-style VWAP
+       from supplied candles.
+    */
+
+    for (
+        const candle of candles
+    ) {
+
+        const high =
+            toNumber(
+                candle.high
+            );
+
+
+        const low =
+            toNumber(
+                candle.low
+            );
+
+
+        const close =
+            toNumber(
+                candle.close
+            );
+
+
+        const volume =
+            toNumber(
+                candle.volume
+            );
+
+
+        const typicalPrice =
+            (
+                high +
+                low +
+                close
+            ) / 3;
+
+
+        cumulativePriceVolume +=
+            typicalPrice *
+            volume;
+
+
+        cumulativeVolume +=
+            volume;
+
+    }
+
+
+    if (
+        cumulativeVolume === 0
+    ) {
+
+        return null;
+
+    }
+
+
+    return (
+        cumulativePriceVolume /
+        cumulativeVolume
+    );
+
+}
+
+
+/* =========================================================
+   19. ADX
+========================================================= */
+
+function calculateADX(
+    candles,
+    period = 14
+) {
+
+    if (
+        !Array.isArray(candles) ||
+        candles.length <
+        period * 2
+    ) {
+
+        return null;
+
+    }
+
+
+    const trueRanges = [];
+
+    const plusDM = [];
+
+    const minusDM = [];
+
+
+    for (
+        let i = 1;
+        i < candles.length;
+        i++
+    ) {
+
+        const current =
+            candles[i];
+
+
+        const previous =
+            candles[i - 1];
+
+
+        const high =
+            toNumber(
+                current.high
+            );
+
+
+        const low =
+            toNumber(
+                current.low
+            );
+
+
+        const previousHigh =
+            toNumber(
+                previous.high
+            );
+
+
+        const previousLow =
+            toNumber(
+                previous.low
+            );
+
+
+        const previousClose =
+            toNumber(
+                previous.close
+            );
+
+
+        const tr =
+            Math.max(
+                high - low,
+                Math.abs(
+                    high -
+                    previousClose
+                ),
+                Math.abs(
+                    low -
+                    previousClose
+                )
+            );
+
+
+        const upwardMove =
+            high -
+            previousHigh;
+
+
+        const downwardMove =
+            previousLow -
+            low;
+
+
+        let positiveDM = 0;
+
+        let negativeDM = 0;
+
+
+        if (
+            upwardMove > downwardMove &&
+            upwardMove > 0
+        ) {
+
+            positiveDM =
+                upwardMove;
+
+        }
+
+
+        if (
+            downwardMove > upwardMove &&
+            downwardMove > 0
+        ) {
+
+            negativeDM =
+                downwardMove;
+
+        }
+
+
+        trueRanges.push(tr);
+
+        plusDM.push(
+            positiveDM
+        );
+
+        minusDM.push(
+            negativeDM
+        );
+
+    }
+
+
+    if (
+        trueRanges.length <
+        period
+    ) {
+
+        return null;
+
+    }
+
+
+    let trAverage =
+        calculateSMA(
+            trueRanges.slice(
+                0,
+                period
+            ),
+            period
+        );
+
+
+    let plusAverage =
+        calculateSMA(
+            plusDM.slice(
+                0,
+                period
+            ),
+            period
+        );
+
+
+    let minusAverage =
+        calculateSMA(
+            minusDM.slice(
+                0,
+                period
+            ),
+            period
+        );
+
+
+    const dxValues = [];
+
+
+    for (
+        let i = period;
+        i < trueRanges.length;
+        i++
+    ) {
+
+        trAverage =
+            (
+                (
+                    trAverage *
+                    (period - 1)
+                ) +
+                trueRanges[i]
+            ) / period;
+
+
+        plusAverage =
+            (
+                (
+                    plusAverage *
+                    (period - 1)
+                ) +
+                plusDM[i]
+
+
+
+
+/* =========================================================
+   QAYYUM OFFICIALZ GOLD TERMINAL
+   JAVASCRIPT — PART 2
+
+   MARKET DATA ENGINE
+   CANDLE DATA
+   EMA
+   RSI
+   MACD
+   ATR
+   ADX
+   VWAP
+   SUPPORT / RESISTANCE
+   MARKET STRUCTURE
+========================================================= */
+
+
+/* =========================================================
+   1. INDICATOR CONFIGURATION
+========================================================= */
+
+const INDICATOR_CONFIG = {
+
+    emaFast: 20,
+
+    emaMedium: 50,
+
+    emaSlow: 200,
+
+    rsiPeriod: 14,
+
+    macdFast: 12,
+
+    macdSlow: 26,
+
+    macdSignal: 9,
+
+    atrPeriod: 14,
+
+    adxPeriod: 14,
+
+    volumePeriod: 20,
+
+    structureLookback: 50,
+
+    supportLookback: 80,
+
+    resistanceLookback: 80
+
+};
+
+
+/* =========================================================
+   2. ANALYSIS STATE
+========================================================= */
+
+const analysisState = {
+
+    timeframe: "15m",
+
+    indicators: {
+
+        ema20: null,
+
+        ema50: null,
+
+        ema200: null,
+
+        rsi: null,
+
+        macd: null,
+
+        macdSignal: null,
+
+        macdHistogram: null,
+
+        atr: null,
+
+        adx: null,
+
+        vwap: null
+
+    },
+
+    structure: {
+
+        trend: "NEUTRAL",
+
+        marketStructure: "WAIT",
+
+        support: null,
+
+        resistance: null,
+
+        higherHigh: false,
+
+        higherLow: false,
+
+        lowerHigh: false,
+
+        lowerLow: false,
+
+        pattern: "NONE"
+
+    },
+
+    momentum: "NEUTRAL",
+
+    volatility: "NORMAL",
+
+    lastAnalysis: null
+
+};
+
+
+/* =========================================================
+   3. BINANCE KLINE URL
+========================================================= */
+
+function getKlineURL(
+    timeframe = analysisState.timeframe,
+    limit = CONFIG.candleLimit
+) {
+
+    return (
+        CONFIG.apiURL +
+        "/klines?symbol=" +
+        CONFIG.symbol +
+        "&interval=" +
+        timeframe +
+        "&limit=" +
+        limit
+    );
+
+}
+
+
+/* =========================================================
+   4. FETCH HISTORICAL CANDLES
+========================================================= */
+
+async function fetchGoldCandles(
+    timeframe = analysisState.timeframe
+) {
+
+    try {
+
+        const response =
+            await fetch(
+                getKlineURL(
+                    timeframe,
+                    CONFIG.candleLimit
+                )
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Candle request failed"
+            );
+
+        }
+
+
+        const raw =
+            await response.json();
+
+
+        if (!Array.isArray(raw)) {
+
+            throw new Error(
+                "Invalid candle data"
+            );
+
+        }
+
+
+        const candles =
+            raw.map(
+                function(candle) {
+
+                    return {
+
+                        time:
+                            Number(candle[0]),
+
+                        open:
+                            Number(candle[1]),
+
+                        high:
+                            Number(candle[2]),
+
+                        low:
+                            Number(candle[3]),
+
+                        close:
+                            Number(candle[4]),
+
+                        volume:
+                            Number(candle[5]),
+
+                        closeTime:
+                            Number(candle[6])
+
+                    };
+
+                }
+            );
+
+
+        market.candles =
+            candles;
+
+
+        return candles;
+
+    }
+
+    catch(error) {
+
+        console.error(
+            "Gold candle error:",
+            error
+        );
+
+
+        return [];
+
+    }
+
+}
+
+
+/* =========================================================
+   5. EXTRACT CLOSE PRICES
+========================================================= */
+
+function getClosePrices(candles) {
+
+    return candles
+        .map(
+            candle =>
+                Number(candle.close)
+        )
+        .filter(
+            price =>
+                Number.isFinite(price)
+        );
+
+}
+
+
+/* =========================================================
+   6. EXTRACT HIGH PRICES
+========================================================= */
+
+function getHighPrices(candles) {
+
+    return candles
+        .map(
+            candle =>
+                Number(candle.high)
+        )
+        .filter(
+            price =>
+                Number.isFinite(price)
+        );
+
+}
+
+
+/* =========================================================
+   7. EXTRACT LOW PRICES
+========================================================= */
+
+function getLowPrices(candles) {
+
+    return candles
+        .map(
+            candle =>
+                Number(candle.low)
+        )
+        .filter(
+            price =>
+                Number.isFinite(price)
+        );
+
+}
+
+
+/* =========================================================
+   8. SIMPLE MOVING AVERAGE
+========================================================= */
+
+function calculateSMA(
+    values,
+    period
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length < period
+    ) {
+
+        return null;
+
+    }
+
+
+    const slice =
+        values.slice(
+            values.length - period
+        );
+
+
+    const sum =
+        slice.reduce(
+            (
+                total,
+                value
+            ) =>
+                total + Number(value),
+            0
+        );
+
+
+    return sum / period;
+
+}
+
+
+/* =========================================================
+   9. EMA
+========================================================= */
+
+function calculateEMA(
+    values,
+    period
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length < period
+    ) {
+
+        return null;
+
+    }
+
+
+    const multiplier =
+        2 /
+        (period + 1);
+
+
+    let ema =
+        calculateSMA(
+            values.slice(
+                0,
+                period
+            ),
+            period
+        );
+
+
+    if (ema === null) {
+
+        return null;
+
+    }
+
+
+    for (
+        let i = period;
+        i < values.length;
+        i++
+    ) {
+
+        const price =
+            Number(values[i]);
+
+
+        ema =
+            (
+                price - ema
+            ) *
+            multiplier +
+            ema;
+
+    }
+
+
+    return ema;
+
+}
+
+
+/* =========================================================
+   10. EMA SERIES
+========================================================= */
+
+function calculateEMASeries(
+    values,
+    period
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length < period
+    ) {
+
+        return [];
+
+    }
+
+
+    const multiplier =
+        2 /
+        (period + 1);
+
+
+    let ema =
+        calculateSMA(
+            values.slice(
+                0,
+                period
+            ),
+            period
+        );
+
+
+    const series =
+        new Array(
+            period - 1
+        ).fill(null);
+
+
+    series.push(ema);
+
+
+    for (
+        let i = period;
+        i < values.length;
+        i++
+    ) {
+
+        ema =
+            (
+                Number(values[i]) -
+                ema
+            ) *
+            multiplier +
+            ema;
+
+
+        series.push(ema);
+
+    }
+
+
+    return series;
+
+}
+
+
+/* =========================================================
+   11. RSI
+========================================================= */
+
+function calculateRSI(
+    values,
+    period = 14
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length <= period
+    ) {
+
+        return null;
+
+    }
+
+
+    let gains = 0;
+
+    let losses = 0;
+
+
+    for (
+        let i = 1;
+        i <= period;
+        i++
+    ) {
+
+        const change =
+            values[i] -
+            values[i - 1];
+
+
+        if (change > 0) {
+
+            gains += change;
+
+        }
+
+        else {
+
+            losses +=
+                Math.abs(change);
+
+        }
+
+    }
+
+
+    let averageGain =
+        gains / period;
+
+
+    let averageLoss =
+        losses / period;
+
+
+    for (
+        let i = period + 1;
+        i < values.length;
+        i++
+    ) {
+
+        const change =
+            values[i] -
+            values[i - 1];
+
+
+        const gain =
+            change > 0
+                ? change
+                : 0;
+
+
+        const loss =
+            change < 0
+                ? Math.abs(change)
+                : 0;
+
+
+        averageGain =
+            (
+                (
+                    averageGain *
+                    (period - 1)
+                ) +
+                gain
+            ) /
+            period;
+
+
+        averageLoss =
+            (
+                (
+                    averageLoss *
+                    (period - 1)
+                ) +
+                loss
+            ) /
+            period;
+
+    }
+
+
+    if (averageLoss === 0) {
+
+        return 100;
+
+    }
+
+
+    const relativeStrength =
+        averageGain /
+        averageLoss;
+
+
+    return (
+        100 -
+        (
+            100 /
+            (
+                1 +
+                relativeStrength
+            )
+        )
+    );
+
+}
+
+
+/* =========================================================
+   12. TRUE RANGE
+========================================================= */
+
+function calculateTrueRange(
+    candles
+) {
+
+    const tr = [];
+
+
+    for (
+        let i = 0;
+        i < candles.length;
+        i++
+    ) {
+
+        const current =
+            candles[i];
+
+
+        if (i === 0) {
+
+            tr.push(
+                current.high -
+                current.low
+            );
+
+            continue;
+
+        }
+
+
+        const previous =
+            candles[i - 1];
+
+
+        const range1 =
+            current.high -
+            current.low;
+
+
+        const range2 =
+            Math.abs(
+                current.high -
+                previous.close
+            );
+
+
+        const range3 =
+            Math.abs(
+                current.low -
+                previous.close
+            );
+
+
+        tr.push(
+            Math.max(
+                range1,
+                range2,
+                range3
+            )
+        );
+
+    }
+
+
+    return tr;
+
+}
+
+
+/* =========================================================
+   13. ATR
+========================================================= */
+
+function calculateATR(
+    candles,
+    period = 14
+) {
+
+    if (
+        !Array.isArray(candles) ||
+        candles.length < period
+    ) {
+
+        return null;
+
+    }
+
+
+    const trueRanges =
+        calculateTrueRange(
+            candles
+        );
+
+
+    return calculateSMA(
+        trueRanges,
+        period
+    );
+
+}
+
+
+/* =========================================================
+   14. MACD
+========================================================= */
+
+function calculateMACD(
+    values,
+    fastPeriod = 12,
+    slowPeriod = 26,
+    signalPeriod = 9
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length < slowPeriod
+    ) {
+
+        return null;
+
+    }
+
+
+    const fastSeries =
+        calculateEMASeries(
+            values,
+            fastPeriod
+        );
+
+
+    const slowSeries =
+        calculateEMASeries(
+            values,
+            slowPeriod
+        );
+
+
+    const macdSeries = [];
+
+
+    for (
+        let i = 0;
+        i < values.length;
+        i++
+    ) {
+
+        if (
+            fastSeries[i] === null ||
+            slowSeries[i] === null
+        ) {
+
+            macdSeries.push(
+                null
+            );
+
+        }
+
+        else {
+
+            macdSeries.push(
+                fastSeries[i] -
+                slowSeries[i]
+            );
+
+        }
+
+    }
+
+
+    const validMACD =
+        macdSeries.filter(
+            value =>
+                value !== null
+        );
+
+
+    if (
+        validMACD.length <
+        signalPeriod
+    ) {
+
+        return null;
+
+    }
+
+
+    const signal =
+        calculateEMA(
+            validMACD,
+            signalPeriod
+        );
+
+
+    const macd =
+        validMACD[
+            validMACD.length - 1
+        ];
+
+
+    const histogram =
+        macd -
+        signal;
+
+
+    return {
+
+        value: macd,
+
+        signal: signal,
+
+        histogram: histogram
+
+    };
+
+}
+
+
+/* =========================================================
+   15. ADX / DIRECTIONAL MOVEMENT
+========================================================= */
+
+function calculateADX(
+    candles,
+    period = 14
+) {
+
+    if (
+        !Array.isArray(candles) ||
+        candles.length <
+        period * 2
+    ) {
+
+        return null;
+
+    }
+
+
+    const trueRanges = [];
+
+    const plusDM = [];
+
+    const minusDM = [];
+
+
+    for (
+        let i = 1;
+        i < candles.length;
+        i++
+    ) {
+
+        const current =
+            candles[i];
+
+        const previous =
+            candles[i - 1];
+
+
+        const highDifference =
+            current.high -
+            previous.high;
+
+
+        const lowDifference =
+            previous.low -
+            current.low;
+
+
+        let positiveDM = 0;
+
+        let negativeDM = 0;
+
+
+        if (
+            highDifference >
+                lowDifference &&
+            highDifference > 0
+        ) {
+
+            positiveDM =
+                highDifference;
+
+        }
+
+
+        if (
+            lowDifference >
+                highDifference &&
+            lowDifference > 0
+        ) {
+
+            negativeDM =
+                lowDifference;
+
+        }
+
+
+        const trueRange =
+            Math.max(
+
+                current.high -
+                current.low,
+
+                Math.abs(
+                    current.high -
+                    previous.close
+                ),
+
+                Math.abs(
+                    current.low -
+                    previous.close
+                )
+
+            );
+
+
+        trueRanges.push(
+            trueRange
+        );
+
+
+        plusDM.push(
+            positiveDM
+        );
+
+
+        minusDM.push(
+            negativeDM
+        );
+
+    }
+
+
+    if (
+        trueRanges.length <
+        period
+    ) {
+
+        return null;
+
+    }
+
+
+    const atr =
+        calculateSMA(
+            trueRanges,
+            period
+        );
+
+
+    const plus =
+        calculateSMA(
+            plusDM,
+            period
+        );
+
+
+    const minus =
+        calculateSMA(
+            minusDM,
+            period
+        );
+
+
+    if (
+        !atr ||
+        atr === 0
+    ) {
+
+        return null;
+
+    }
+
+
+    const plusDI =
+        (
+            plus /
+            atr
+        ) *
+        100;
+
+
+    const minusDI =
+        (
+            minus /
+            atr
+        ) *
+        100;
+
+
+    const denominator =
+        plusDI +
+        minusDI;
+
+
+    if (
+        denominator === 0
+    ) {
 
         return 0;
 
     }
 
 
-    // Trend
-    if (data.trendStrong) {
-
-        score += 15;
-
-    }
-
-
-    // EMA alignment
-    if (data.emaAligned) {
-
-        score += 15;
-
-    }
+    const dx =
+        (
+            Math.abs(
+                plusDI -
+                minusDI
+            ) /
+            denominator
+        ) *
+        100;
 
 
-    // RSI confirmation
-    if (data.rsiConfirmed) {
-
-        score += 10;
-
-    }
-
-
-    // MACD confirmation
-    if (data.macdConfirmed) {
-
-        score += 10;
-
-    }
-
-
-    // VWAP confirmation
-    if (data.vwapConfirmed) {
-
-        score += 10;
-
-    }
-
-
-    // Volume
-    if (data.volumeConfirmed) {
-
-        score += 10;
-
-    }
-
-
-    // Momentum
-    if (data.momentumConfirmed) {
-
-        score += 10;
-
-    }
-
-
-    // Higher timeframe
-    if (data.htfConfirmed) {
-
-        score += 10;
-
-    }
-
-
-    // Market structure
-    if (data.structureConfirmed) {
-
-        score += 10;
-
-    }
-
-
-    return Math.min(100, score);
+    return dx;
 
 }
 
 
+/* =========================================================
+   16. VWAP
+========================================================= */
 
-// =========================================================
-// SIGNAL DECISION
-// =========================================================
-
-function decideGoldSignal(data) {
-
-    if (!data) {
-
-        return {
-
-            signal: "WAIT",
-
-            bias: "NEUTRAL",
-
-            score: 0
-
-        };
-
-    }
-
-
-    const score = signalQualityScore(data);
-
-
-    let bullish = 0;
-
-    let bearish = 0;
-
-
-    if (data.priceAboveEMA) {
-
-        bullish++;
-
-    }
-
-    else {
-
-        bearish++;
-
-    }
-
-
-    if (data.rsiBullish) {
-
-        bullish++;
-
-    }
-
-    else if (data.rsiBearish) {
-
-        bearish++;
-
-    }
-
-
-    if (data.macdBullish) {
-
-        bullish++;
-
-    }
-
-    else if (data.macdBearish) {
-
-        bearish++;
-
-    }
-
-
-    if (data.priceAboveVWAP) {
-
-        bullish++;
-
-    }
-
-    else {
-
-        bearish++;
-
-    }
-
-
-    if (data.htfBullish) {
-
-        bullish++;
-
-    }
-
-    else if (data.htfBearish) {
-
-        bearish++;
-
-    }
-
-
-    /*
-       QUALITY OVER QUANTITY
-
-       We intentionally require strong agreement.
-
-       This means the engine can remain WAIT
-       for a long time instead of forcing trades.
-    */
-
+function calculateVWAP(
+    candles
+) {
 
     if (
-        bullish >= 4 &&
-        bullish > bearish &&
-        score >= 70
+        !Array.isArray(candles) ||
+        candles.length === 0
     ) {
 
-        return {
+        return null;
 
-            signal: "LONG",
+    }
 
-            bias: "BULLISH",
 
-            score: score
+    let cumulativePriceVolume =
+        0;
 
-        };
+
+    let cumulativeVolume =
+        0;
+
+
+    for (
+        const candle of candles
+    ) {
+
+        const typicalPrice =
+            (
+                candle.high +
+                candle.low +
+                candle.close
+            ) / 3;
+
+
+        const volume =
+            Number(candle.volume);
+
+
+        if (
+            !Number.isFinite(volume)
+        ) {
+
+            continue;
+
+        }
+
+
+        cumulativePriceVolume +=
+            typicalPrice *
+            volume;
+
+
+        cumulativeVolume +=
+            volume;
 
     }
 
 
     if (
-        bearish >= 4 &&
-        bearish > bullish &&
-        score >= 70
+        cumulativeVolume === 0
     ) {
 
-        return {
-
-            signal: "SHORT",
-
-            bias: "BEARISH",
-
-            score: score
-
-        };
-
-    }
-
-
-    return {
-
-        signal: "WAIT",
-
-        bias:
-            bullish > bearish
-                ? "BULLISH WATCH"
-                : bearish > bullish
-                    ? "BEARISH WATCH"
-                    : "NEUTRAL",
-
-        score: score
-
-    };
-
-}
-
-
-
-// =========================================================
-// BUILD SIGNAL OBJECT
-// =========================================================
-
-function createGoldSignal(data) {
-
-    const decision = decideGoldSignal(data);
-
-
-    if (
-        decision.signal === "WAIT" ||
-        !data.price
-    ) {
-
-        return {
-
-            signal: "WAIT",
-
-            bias: decision.bias,
-
-            confidence: decision.score,
-
-            entry: null,
-
-            sl: null,
-
-            tp1: null,
-
-            tp2: null,
-
-            tp3: null,
-
-            slPips: null,
-
-            tp1Pips: null,
-
-            tp2Pips: null,
-
-            tp3Pips: null
-
-        };
-
-    }
-
-
-    const levels = buildGoldLevels(
-        data.price,
-        data.atr,
-        decision.signal
-    );
-
-
-    if (!levels) {
-
-        return {
-
-            signal: "WAIT",
-
-            bias: "NEUTRAL",
-
-            confidence: 0
-
-        };
-
-    }
-
-
-    return {
-
-        signal: decision.signal,
-
-        bias: decision.bias,
-
-        confidence: decision.score,
-
-        entry: levels.entry,
-
-        sl: levels.sl,
-
-        tp1: levels.tp1,
-
-        tp2: levels.tp2,
-
-        tp3: levels.tp3,
-
-        slPips: levels.slPips,
-
-        tp1Pips: levels.tp1Pips,
-
-        tp2Pips: levels.tp2Pips,
-
-        tp3Pips: levels.tp3Pips
-
-    };
-
-}
-
-
-
-// =========================================================
-// GOLD SIGNAL SUMMARY
-// =========================================================
-
-function getGoldSignalSummary(signal) {
-
-    if (!signal) {
-
-        return "Waiting for market data...";
-
-    }
-
-
-    if (signal.signal === "WAIT") {
-
-        return `WAIT | ${signal.bias} | Quality ${signal.confidence}%`;
+        return null;
 
     }
 
 
     return (
-
-        `${signal.signal} | ` +
-
-        `${signal.bias} | ` +
-
-        `Quality ${signal.confidence}% | ` +
-
-        `SL ${Math.round(signal.slPips)} pips | ` +
-
-        `TP1 ${Math.round(signal.tp1Pips)} pips`
-
+        cumulativePriceVolume /
+        cumulativeVolume
     );
 
 }
 
 
+/* =========================================================
+   17. SUPPORT DETECTION
+========================================================= */
 
-// =========================================================
-// TEST / DEBUG
-// =========================================================
+function detectSupport(
+    candles,
+    lookback =
+        INDICATOR_CONFIG.supportLookback
+) {
 
-console.log(
-    "XAUUSD Premium Engine Loaded"
-);
+    if (
+        !Array.isArray(candles) ||
+        candles.length < 10
+    ) {
+
+        return null;
+
+    }
 
 
-console.log(
-    "Gold Pip Rule: $1.00 = 10 pips"
-);
+    const recent =
+        candles.slice(
+            -lookback
+        );
 
 
-console.log(
-    "Example 40 pips @ 0.01 lot =",
-    formatMoney(
-        calculateGoldProfit(40, 0.01)
+    let lowest =
+        Infinity;
+
+
+    for (
+        const candle of recent
+    ) {
+
+        if (
+            candle.low <
+            lowest
+        ) {
+
+            lowest =
+                candle.low;
+
+        }
+
+    }
+
+
+    return Number.isFinite(
+        lowest
     )
-);
+        ? lowest
+        : null;
 
-
+}
 
 
 /* =========================================================
-   XAUUSD PREMIUM LIVE MARKET ANALYSIS
-   JS PART 4
-   ========================================================= */
+   18. RESISTANCE DETECTION
+========================================================= */
 
-/*
-   PART 4 RESPONSIBILITIES
+function detectResistance(
+    candles,
+    lookback =
+        INDICATOR_CONFIG.resistanceLookback
+) {
 
-   - Live XAUUSDT price
-   - Binance WebSocket
-   - 15m candle data
-   - 5m candle data
-   - 1h candle data
-   - EMA
-   - RSI
-   - MACD
-   - ATR
-   - VWAP
-   - Volume
-   - Momentum
-   - Market structure
-   - Higher timeframe confirmation
-   - Premium signal preparation
+    if (
+        !Array.isArray(candles) ||
+        candles.length < 10
+    ) {
 
-   NOTE:
-   XAUUSDT is used as the live crypto-exchange
-   gold proxy. For actual Exness XAUUSD execution,
-   broker-side pricing can differ slightly.
-*/
+        return null;
+
+    }
 
 
-// =========================================================
-// MARKET DATA STORAGE
-// =========================================================
+    const recent =
+        candles.slice(
+            -lookback
+        );
 
-const goldMarket = {
 
-    price: null,
+    let highest =
+        -Infinity;
 
-    previousPrice: null,
 
-    candles5m: [],
+    for (
+        const candle of recent
+    ) {
 
-    candles15m: [],
+        if (
+            candle.high >
+            highest
+        ) {
 
-    candles1h: [],
+            highest =
+                candle.high;
 
-    lastUpdate: null,
+        }
 
-    connected: false,
+    }
 
-    signal: null,
 
-    analysis: null
+    return Number.isFinite(
+        highest
+    )
+        ? highest
+        : null;
+
+}
+
+
+/* =========================================================
+   19. SWING HIGH
+========================================================= */
+
+function isSwingHigh(
+    candles,
+    index,
+    strength = 2
+) {
+
+    if (
+        index < strength ||
+        index >=
+            candles.length -
+            strength
+    ) {
+
+        return false;
+
+    }
+
+
+    const current =
+        candles[index].high;
+
+
+    for (
+        let i = 1;
+        i <= strength;
+        i++
+    ) {
+
+        if (
+            current <=
+                candles[index - i].high ||
+            current <=
+                candles[index + i].high
+        ) {
+
+            return false;
+
+        }
+
+    }
+
+
+    return true;
+
+}
+
+
+/* =========================================================
+   20. SWING LOW
+========================================================= */
+
+function isSwingLow(
+    candles,
+    index,
+    strength = 2
+) {
+
+    if (
+        index < strength ||
+        index >=
+            candles.length -
+            strength
+    ) {
+
+        return false;
+
+    }
+
+
+    const current =
+        candles[index].low;
+
+
+    for (
+        let i = 1;
+        i <= strength;
+        i++
+    ) {
+
+        if (
+            current >=
+                candles[index - i].low ||
+            current >=
+                candles[index + i].low
+        ) {
+
+            return false;
+
+        }
+
+    }
+
+
+    return true;
+
+}
+
+
+/* =========================================================
+   21. GET SWING POINTS
+========================================================= */
+
+function getSwingPoints(
+    candles
+) {
+
+    const highs = [];
+
+    const lows = [];
+
+
+    for (
+        let i = 2;
+        i < candles.length - 2;
+        i++
+    ) {
+
+        if (
+            isSwingHigh(
+                candles,
+                i,
+                2
+            )
+        ) {
+
+            highs.push({
+
+                index: i,
+
+                price:
+                    candles[i].high
+
+            });
+
+        }
+
+
+        if (
+            isSwingLow(
+                candles,
+                i,
+                2
+            )
+        ) {
+
+            lows.push({
+
+                index: i,
+
+                price:
+                    candles[i].low
+
+            });
+
+        }
+
+    }
+
+
+    return {
+
+        highs,
+
+        lows
+
+    };
+
+}
+
+
+/* =========================================================
+   22. MARKET STRUCTURE
+========================================================= */
+
+function detectMarketStructure(
+    candles
+) {
+
+    if (
+        !Array.isArray(candles) ||
+        candles.length < 20
+    ) {
+
+        return {
+
+            trend: "NEUTRAL",
+
+            marketStructure: "WAIT",
+
+            support: null,
+
+            resistance: null,
+
+
+
+
+
+           /* =========================================================
+   QAYYUM OFFICIALZ GOLD TERMINAL
+   JAVASCRIPT — PART 4
+
+   FINAL APPLICATION ENGINE
+
+   FEATURES:
+   - Signal generation
+   - Technical + price-action scoring
+   - Entry / SL / TP1 / TP2 / TP3
+   - Risk management
+   - Trade history
+   - Win / Loss tracking
+   - Calculator
+   - Market structure UI
+   - Live chart rendering
+   - Timeframe switching
+   - Dashboard synchronization
+========================================================= */
+
+
+/* =========================================================
+   1. FINAL ENGINE STATE
+========================================================= */
+
+const engine = {
+
+    timeframe: "15m",
+
+    lastSignalTime: null,
+
+    lastProcessedCandle: null,
+
+    signalActive: false,
+
+    signalId: null,
+
+    support: null,
+
+    resistance: null,
+
+    structure: "NEUTRAL",
+
+    pattern: "NONE",
+
+    trend: "NEUTRAL",
+
+    momentum: "NEUTRAL",
+
+    volatility: "NORMAL",
+
+    indicators: {},
+
+    candles: [],
+
+    chartCandleLimit: 120
 
 };
 
 
+/* =========================================================
+   2. EXTRA PERFORMANCE STATE
+========================================================= */
 
-// =========================================================
-// BINANCE API
-// =========================================================
+if (
+    typeof performance !== "object" ||
+    !performance
+) {
 
-const BINANCE_API =
-    "https://api.binance.com/api/v3";
+    performance = {
+
+        totalSignals: 0,
+        wins: 0,
+        losses: 0
+
+    };
+
+}
 
 
+if (!Array.isArray(tradeHistory)) {
 
-const GOLD_SYMBOL =
-    "XAUUSDT";
+    tradeHistory = [];
+
+}
 
 
+/* =========================================================
+   3. DOM READY HELPER
+========================================================= */
 
-// =========================================================
-// FETCH CANDLES
-// =========================================================
+function safeNumber(value, fallback = 0) {
+
+    const number = Number(value);
+
+    return Number.isFinite(number)
+        ? number
+        : fallback;
+
+}
+
+
+function clamp(value, min, max) {
+
+    return Math.min(
+        max,
+        Math.max(min, value)
+    );
+
+}
+
+
+/* =========================================================
+   4. FETCH HISTORICAL CANDLES
+========================================================= */
 
 async function fetchGoldCandles(
-    interval,
-    limit = 500
+    timeframe = engine.timeframe
 ) {
 
     try {
 
-        const response = await fetch(
+        const url =
+            CONFIG.apiURL +
+            "/klines?symbol=" +
+            CONFIG.symbol +
+            "&interval=" +
+            timeframe +
+            "&limit=" +
+            CONFIG.candleLimit;
 
-            `${BINANCE_API}/klines` +
-            `?symbol=${GOLD_SYMBOL}` +
-            `&interval=${interval}` +
-            `&limit=${limit}`
 
-        );
+        const response =
+            await fetch(url);
 
 
         if (!response.ok) {
 
             throw new Error(
-                "Binance candle request failed"
+                "Kline request failed"
             );
 
         }
@@ -2070,23 +4239,48 @@ async function fetchGoldCandles(
         if (!Array.isArray(data)) {
 
             throw new Error(
-                "Invalid candle response"
+                "Invalid candle data"
             );
 
         }
 
 
-        return data;
+        engine.candles =
+            data.map(function(candle) {
+
+                return {
+
+                    time: Number(candle[0]),
+
+                    open: Number(candle[1]),
+
+                    high: Number(candle[2]),
+
+                    low: Number(candle[3]),
+
+                    close: Number(candle[4]),
+
+                    volume: Number(candle[5])
+
+                };
+
+            });
+
+
+        market.candles =
+            engine.candles;
+
+
+        return engine.candles;
 
     }
 
-    catch (error) {
+    catch(error) {
 
         console.error(
-            "Candle fetch error:",
+            "Candle loading error:",
             error
         );
-
 
         return [];
 
@@ -2095,594 +4289,681 @@ async function fetchGoldCandles(
 }
 
 
+/* =========================================================
+   5. SIMPLE MOVING AVERAGE
+========================================================= */
 
-// =========================================================
-// INITIAL MARKET DATA
-// =========================================================
+function calculateSMA(
+    values,
+    period
+) {
 
-async function loadGoldMarketData() {
+    if (
+        !Array.isArray(values) ||
+        values.length < period
+    ) {
 
-    try {
+        return null;
 
-        const [
-            candles5m,
-            candles15m,
-            candles1h
-        ] = await Promise.all([
-
-            fetchGoldCandles(
-                GOLD_CONFIG.analysisTimeframe,
-                300
-            ),
-
-            fetchGoldCandles(
-                GOLD_CONFIG.signalTimeframe,
-                500
-            ),
-
-            fetchGoldCandles(
-                GOLD_CONFIG.higherTimeframe,
-                300
-            )
-
-        ]);
+    }
 
 
-        goldMarket.candles5m =
-            candles5m;
-
-        goldMarket.candles15m =
-            candles15m;
-
-        goldMarket.candles1h =
-            candles1h;
+    let sum = 0;
 
 
-        if (candles15m.length) {
+    for (
+        let i = values.length - period;
+        i < values.length;
+        i++
+    ) {
 
-            const last =
-                candles15m[
-                    candles15m.length - 1
-                ];
+        sum += Number(values[i]);
 
-            goldMarket.price =
-                Number(last[4]);
+    }
+
+
+    return sum / period;
+
+}
+
+
+/* =========================================================
+   6. EMA
+========================================================= */
+
+function calculateEMA(
+    values,
+    period
+) {
+
+    if (
+        !Array.isArray(values) ||
+        values.length < period
+    ) {
+
+        return null;
+
+    }
+
+
+    const multiplier =
+        2 / (period + 1);
+
+
+    let ema =
+        calculateSMA(
+            values.slice(0, period),
+            period
+        );
+
+
+    if (ema === null) {
+
+        return null;
+
+    }
+
+
+    for (
+        let i = period;
+        i < values.length;
+        i++
+    ) {
+
+        ema =
+            (
+                values[i] - ema
+            ) *
+            multiplier +
+            ema;
+
+    }
+
+
+    return ema;
+
+}
+
+
+/* =========================================================
+   7. RSI
+========================================================= */
+
+function calculateRSI(
+    closes,
+    period = 14
+) {
+
+    if (
+        closes.length <= period
+    ) {
+
+        return null;
+
+    }
+
+
+    let gains = 0;
+
+    let losses = 0;
+
+
+    for (
+        let i = 1;
+        i <= period;
+        i++
+    ) {
+
+        const change =
+            closes[i] -
+            closes[i - 1];
+
+
+        if (change >= 0) {
+
+            gains += change;
 
         }
 
+        else {
 
-        goldMarket.lastUpdate =
-            new Date();
+            losses += Math.abs(change);
 
-
-        console.log(
-            "Gold market data loaded"
-        );
-
-
-        analyzeGoldMarket();
+        }
 
     }
 
-    catch (error) {
 
-        console.error(
-            "Gold market loading error:",
-            error
-        );
-
-    }
-
-}
+    let averageGain =
+        gains / period;
 
 
-
-// =========================================================
-// CONVERT CANDLES TO CLOSE PRICES
-// =========================================================
-
-function candleCloses(candles) {
-
-    return candles.map(
-        candle => Number(candle[4])
-    );
-
-}
+    let averageLoss =
+        losses / period;
 
 
-
-// =========================================================
-// CANDLE HIGHS
-// =========================================================
-
-function candleHighs(candles) {
-
-    return candles.map(
-        candle => Number(candle[2])
-    );
-
-}
-
-
-
-// =========================================================
-// CANDLE LOWS
-// =========================================================
-
-function candleLows(candles) {
-
-    return candles.map(
-        candle => Number(candle[3])
-    );
-
-}
-
-
-
-// =========================================================
-// MOMENTUM
-// =========================================================
-
-function calculateMomentum(prices, period = 10) {
-
-    if (
-        !prices ||
-        prices.length <= period
+    for (
+        let i = period + 1;
+        i < closes.length;
+        i++
     ) {
 
-        return 0;
+        const change =
+            closes[i] -
+            closes[i - 1];
+
+
+        const gain =
+            Math.max(change, 0);
+
+
+        const loss =
+            Math.max(-change, 0);
+
+
+        averageGain =
+            (
+                averageGain *
+                (period - 1) +
+                gain
+            ) / period;
+
+
+        averageLoss =
+            (
+                averageLoss *
+                (period - 1) +
+                loss
+            ) / period;
 
     }
 
 
-    const current =
-        prices[prices.length - 1];
+    if (averageLoss === 0) {
+
+        return 100;
+
+    }
 
 
-    const previous =
-        prices[
-            prices.length - 1 - period
-        ];
+    const rs =
+        averageGain /
+        averageLoss;
 
 
-    if (!previous) {
+    return 100 -
+        (
+            100 /
+            (1 + rs)
+        );
 
-        return 0;
+}
+
+
+/* =========================================================
+   8. ATR
+========================================================= */
+
+function calculateATR(
+    candles,
+    period = 14
+) {
+
+    if (
+        candles.length <= period
+    ) {
+
+        return null;
+
+    }
+
+
+    const ranges = [];
+
+
+    for (
+        let i = 1;
+        i < candles.length;
+        i++
+    ) {
+
+        const current =
+            candles[i];
+
+
+        const previous =
+            candles[i - 1];
+
+
+        const trueRange =
+            Math.max(
+
+                current.high -
+                current.low,
+
+                Math.abs(
+                    current.high -
+                    previous.close
+                ),
+
+                Math.abs(
+                    current.low -
+                    previous.close
+                )
+
+            );
+
+
+        ranges.push(
+            trueRange
+        );
+
+    }
+
+
+    return calculateSMA(
+        ranges,
+        period
+    );
+
+}
+
+
+/* =========================================================
+   9. MACD
+========================================================= */
+
+function calculateMACD(
+    closes
+) {
+
+    if (closes.length < 35) {
+
+        return null;
+
+    }
+
+
+    const ema12 =
+        calculateEMA(
+            closes,
+            12
+        );
+
+
+    const ema26 =
+        calculateEMA(
+            closes,
+            26
+        );
+
+
+    if (
+        ema12 === null ||
+        ema26 === null
+    ) {
+
+        return null;
+
+    }
+
+
+    const macd =
+        ema12 - ema26;
+
+
+    const macdValues = [];
+
+
+    for (
+        let i = 26;
+        i < closes.length;
+        i++
+    ) {
+
+        const shortSlice =
+            closes.slice(
+                0,
+                i + 1
+            );
+
+
+        const fast =
+            calculateEMA(
+                shortSlice,
+                12
+            );
+
+
+        const slow =
+            calculateEMA(
+                shortSlice,
+                26
+            );
+
+
+        if (
+            fast !== null &&
+            slow !== null
+        ) {
+
+            macdValues.push(
+                fast - slow
+            );
+
+        }
+
+    }
+
+
+    const signal =
+        calculateEMA(
+            macdValues,
+            9
+        );
+
+
+    return {
+
+        value: macd,
+
+        signal:
+            signal === null
+                ? macd
+                : signal,
+
+        histogram:
+            macd -
+            (
+                signal === null
+                    ? macd
+                    : signal
+            )
+
+    };
+
+}
+
+
+/* =========================================================
+   10. VWAP
+========================================================= */
+
+function calculateVWAP(
+    candles
+) {
+
+    if (
+        !candles.length
+    ) {
+
+        return null;
+
+    }
+
+
+    let cumulativePriceVolume =
+        0;
+
+
+    let cumulativeVolume =
+        0;
+
+
+    for (
+        let i = 0;
+        i < candles.length;
+        i++
+    ) {
+
+        const candle =
+            candles[i];
+
+
+        const typicalPrice =
+            (
+                candle.high +
+                candle.low +
+                candle.close
+            ) / 3;
+
+
+        cumulativePriceVolume +=
+            typicalPrice *
+            candle.volume;
+
+
+        cumulativeVolume +=
+            candle.volume;
+
+    }
+
+
+    if (
+        cumulativeVolume === 0
+    ) {
+
+        return null;
 
     }
 
 
     return (
-        (current - previous) /
-        previous
-    ) * 100;
+        cumulativePriceVolume /
+        cumulativeVolume
+    );
 
 }
 
 
-
-// =========================================================
-// MOMENTUM STATUS
-// =========================================================
-
-function momentumStatus(
-    momentum
-) {
-
-    if (momentum >= 0.35) {
-
-        return "BULLISH";
-
-    }
-
-
-    if (momentum <= -0.35) {
-
-        return "BEARISH";
-
-    }
-
-
-    return "NEUTRAL";
-
-}
-
-
-
-// =========================================================
-// EMA ALIGNMENT
-// =========================================================
-
-function getEMAAlignment(prices) {
-
-    if (prices.length < 200) {
-
-        return {
-
-            bullish: false,
-
-            bearish: false
-
-        };
-
-    }
-
-
-    const ema20 =
-        EMA(prices, 20);
-
-    const ema50 =
-        EMA(prices, 50);
-
-    const ema200 =
-        EMA(prices, 200);
-
-
-    return {
-
-        bullish:
-            ema20 > ema50 &&
-            ema50 > ema200,
-
-        bearish:
-            ema20 < ema50 &&
-            ema50 < ema200,
-
-        ema20,
-        ema50,
-        ema200
-
-    };
-
-}
-
-
-
-// =========================================================
-// RSI DIRECTION
-// =========================================================
-
-function getRSIStatus(rsi) {
-
-    if (
-        rsi >= 52 &&
-        rsi <= 68
-    ) {
-
-        return "BULLISH";
-
-    }
-
-
-    if (
-        rsi <= 48 &&
-        rsi >= 32
-    ) {
-
-        return "BEARISH";
-
-    }
-
-
-    return "NEUTRAL";
-
-}
-
-
-
-// =========================================================
-// MACD STATUS
-// =========================================================
-
-function getMACDStatus(
-    macd,
-    prices
-) {
-
-    const recentPrices =
-        prices.slice(-100);
-
-
-    if (
-        recentPrices.length < 26
-    ) {
-
-        return "NEUTRAL";
-
-    }
-
-
-    const previousPrices =
-        prices.slice(
-            -101,
-            -1
-        );
-
-
-    const previousMACD =
-        MACD(previousPrices);
-
-
-    if (
-        macd > 0 &&
-        macd > previousMACD
-    ) {
-
-        return "BULLISH";
-
-    }
-
-
-    if (
-        macd < 0 &&
-        macd < previousMACD
-    ) {
-
-        return "BEARISH";
-
-    }
-
-
-    return "NEUTRAL";
-
-}
-
-
-
-// =========================================================
-// VWAP STATUS
-// =========================================================
-
-function getVWAPStatus(
-    price,
-    vwap
-) {
-
-    if (price > vwap) {
-
-        return "ABOVE";
-
-    }
-
-
-    if (price < vwap) {
-
-        return "BELOW";
-
-    }
-
-
-    return "AT";
-
-}
-
-
-
-// =========================================================
-// VOLUME STATUS
-// =========================================================
-
-function getVolumeStatus(
-    candles
+/* =========================================================
+   11. ADX
+========================================================= */
+
+function calculateADX(
+    candles,
+    period = 14
 ) {
 
     if (
-        !candles ||
-        candles.length < 30
+        candles.length <
+        period * 2 + 2
     ) {
 
-        return "NORMAL";
+        return null;
 
     }
 
 
-    const volumes =
-        candles.map(
-            c => Number(c[5])
+    const trs = [];
+
+    const plusDM = [];
+
+    const minusDM = [];
+
+
+    for (
+        let i = 1;
+        i < candles.length;
+        i++
+    ) {
+
+        const current =
+            candles[i];
+
+
+        const previous =
+            candles[i - 1];
+
+
+        const tr =
+            Math.max(
+
+                current.high -
+                current.low,
+
+                Math.abs(
+                    current.high -
+                    previous.close
+                ),
+
+                Math.abs(
+                    current.low -
+                    previous.close
+                )
+
+            );
+
+
+        const upMove =
+            current.high -
+            previous.high;
+
+
+        const downMove =
+            previous.low -
+            current.low;
+
+
+        trs.push(tr);
+
+
+        plusDM.push(
+            upMove > downMove &&
+            upMove > 0
+                ? upMove
+                : 0
         );
 
 
-    const current =
-        volumes[
-            volumes.length - 1
-        ];
-
-
-    const previous =
-        volumes.slice(-21, -1);
-
-
-    const average =
-        previous.reduce(
-            (sum, value) =>
-                sum + value,
-            0
-        ) / previous.length;
-
-
-    if (
-        current >
-        average * 1.5
-    ) {
-
-        return "VERY HIGH";
-
-    }
-
-
-    if (
-        current >
-        average * 1.2
-    ) {
-
-        return "HIGH";
-
-    }
-
-
-    if (
-        current <
-        average * 0.7
-    ) {
-
-        return "LOW";
-
-    }
-
-
-    return "NORMAL";
-
-}
-
-
-
-// =========================================================
-// MARKET STRUCTURE
-// =========================================================
-
-function detectMarketStructure(
-    candles
-) {
-
-    if (
-        !candles ||
-        candles.length < 30
-    ) {
-
-        return {
-
-            status: "UNKNOWN",
-
-            bullish: false,
-
-            bearish: false
-
-        };
-
-    }
-
-
-    const recent =
-        candles.slice(-30);
-
-
-    const highs =
-        candleHighs(recent);
-
-
-    const lows =
-        candleLows(recent);
-
-
-    const half =
-        Math.floor(
-            recent.length / 2
+        minusDM.push(
+            downMove > upMove &&
+            downMove > 0
+                ? downMove
+                : 0
         );
 
-
-    const firstHalfHigh =
-        Math.max(
-            ...highs.slice(
-                0,
-                half
-            )
-        );
+    }
 
 
-    const secondHalfHigh =
-        Math.max(
-            ...highs.slice(
-                half
-            )
-        );
+    const dxValues = [];
 
 
-    const firstHalfLow =
+    for (
+        let i = period;
+        i < trs.length;
+        i++
+    ) {
+
+        const trSlice =
+            trs.slice(
+                i - period,
+                i
+            );
+
+
+        const plusSlice =
+            plusDM.slice(
+                i - period,
+                i
+            );
+
+
+        const minusSlice =
+            minusDM.slice(
+                i - period,
+                i
+            );
+
+
+        const atr =
+            trSlice.reduce(
+                (a, b) => a + b,
+                0
+            ) / period;
+
+
+        if (atr === 0) {
+
+            continue;
+
+        }
+
+
+        const plus =
+            (
+                plusSlice.reduce(
+                    (a, b) => a + b,
+                    0
+                ) / period
+            ) / atr * 100;
+
+
+        const minus =
+            (
+                minusSlice.reduce(
+                    (a, b) => a + b,
+                    0
+                ) / period
+            ) / atr * 100;
+
+
+        const denominator =
+            plus + minus;
+
+
+        if (
+            denominator === 0
+        ) {
+
+            continue;
+
+        }
+
+
+        const dx =
+            Math.abs(
+                plus - minus
+            ) /
+            denominator *
+            100;
+
+
+        dxValues.push(dx);
+
+    }
+
+
+    if (
+        !dxValues.length
+    ) {
+
+        return null;
+
+    }
+
+
+    return calculateSMA(
+        dxValues,
         Math.min(
-            ...lows.slice(
-                0,
-                half
-            )
-        );
-
-
-    const secondHalfLow =
-        Math.min(
-            ...lows.slice(
-                half
-            )
-        );
-
-
-    const bullish =
-        secondHalfHigh >
-            firstHalfHigh &&
-        secondHalfLow >
-            firstHalfLow;
-
-
-    const bearish =
-        secondHalfHigh <
-            firstHalfHigh &&
-        secondHalfLow <
-            firstHalfLow;
-
-
-    if (bullish) {
-
-        return {
-
-            status: "BULLISH STRUCTURE",
-
-            bullish: true,
-
-            bearish: false
-
-        };
-
-    }
-
-
-    if (bearish) {
-
-        return {
-
-            status: "BEARISH STRUCTURE",
-
-            bullish: false,
-
-            bearish: true
-
-        };
-
-    }
-
-
-    return {
-
-        status: "RANGING",
-
-        bullish: false,
-
-        bearish: false
-
-    };
+            period,
+            dxValues.length
+        )
+    );
 
 }
 
 
+/* =========================================================
+   12. PIVOT SUPPORT / RESISTANCE
+========================================================= */
 
-// =========================================================
-// SUPPORT / RESISTANCE
-// =========================================================
-
-function findSupportResistance(
+function detectSupportResistance(
     candles
 ) {
 
     if (
-        !candles ||
-        candles.length < 50
+        candles.length < 30
     ) {
 
         return {
@@ -2697,23 +4978,107 @@ function findSupportResistance(
 
 
     const recent =
-        candles.slice(-100);
+        candles.slice(-50);
 
 
-    const highs =
-        candleHighs(recent);
+    let support =
+        Infinity;
 
 
-    const lows =
-        candleLows(recent);
+    let resistance =
+        -Infinity;
 
 
-    const resistance =
-        Math.max(...highs);
+    for (
+        let i = 2;
+        i < recent.length - 2;
+        i++
+    ) {
+
+        const c =
+            recent[i];
 
 
-    const support =
-        Math.min(...lows);
+        const isLow =
+
+            c.low <=
+            recent[i - 1].low &&
+
+            c.low <=
+            recent[i - 2].low &&
+
+            c.low <=
+            recent[i + 1].low &&
+
+            c.low <=
+            recent[i + 2].low;
+
+
+        const isHigh =
+
+            c.high >=
+            recent[i - 1].high &&
+
+            c.high >=
+            recent[i - 2].high &&
+
+            c.high >=
+            recent[i + 1].high &&
+
+            c.high >=
+            recent[i + 2].high;
+
+
+        if (isLow) {
+
+            support =
+                Math.min(
+                    support,
+                    c.low
+                );
+
+        }
+
+
+        if (isHigh) {
+
+            resistance =
+                Math.max(
+                    resistance,
+                    c.high
+                );
+
+        }
+
+    }
+
+
+    if (
+        support === Infinity
+    ) {
+
+        support =
+            Math.min(
+                ...recent.map(
+                    c => c.low
+                )
+            );
+
+    }
+
+
+    if (
+        resistance === -Infinity
+    ) {
+
+        resistance =
+            Math.max(
+                ...recent.map(
+                    c => c.high
+                )
+            );
+
+    }
 
 
     return {
@@ -2727,77 +5092,93 @@ function findSupportResistance(
 }
 
 
+/* =========================================================
+   13. MARKET STRUCTURE
+========================================================= */
 
-// =========================================================
-// NEAR SUPPORT / RESISTANCE
-// =========================================================
-
-function checkSRLocation(
-    price,
-    support,
-    resistance,
-    atr
-) {
-
-    if (
-        !support ||
-        !resistance ||
-        !atr
-    ) {
-
-        return "MID-RANGE";
-
-    }
-
-
-    const supportDistance =
-        Math.abs(
-            price - support
-        );
-
-
-    const resistanceDistance =
-        Math.abs(
-            resistance - price
-        );
-
-
-    if (
-        supportDistance <=
-        atr * 0.5
-    ) {
-
-        return "NEAR SUPPORT";
-
-    }
-
-
-    if (
-        resistanceDistance <=
-        atr * 0.5
-    ) {
-
-        return "NEAR RESISTANCE";
-
-    }
-
-
-    return "MID-RANGE";
-
-}
-
-
-
-// =========================================================
-// CANDLE PATTERN
-// =========================================================
-
-function detectCandlePattern(
+function detectMarketStructure(
     candles
 ) {
 
     if (
-        !candles ||
+        candles.length < 20
+    ) {
+
+        return "NEUTRAL";
+
+    }
+
+
+    const recent =
+        candles.slice(-12);
+
+
+    const highs =
+        recent.map(
+            c => c.high
+        );
+
+
+    const lows =
+        recent.map(
+            c => c.low
+        );
+
+
+    const higherHigh =
+        highs[highs.length - 1] >
+        highs[0];
+
+
+    const higherLow =
+        lows[lows.length - 1] >
+        lows[0];
+
+
+    const lowerHigh =
+        highs[highs.length - 1] <
+        highs[0];
+
+
+    const lowerLow =
+        lows[lows.length - 1] <
+        lows[0];
+
+
+    if (
+        higherHigh &&
+        higherLow
+    ) {
+
+        return "BULLISH";
+
+    }
+
+
+    if (
+        lowerHigh &&
+        lowerLow
+    ) {
+
+        return "BEARISH";
+
+    }
+
+
+    return "RANGE";
+
+}
+
+
+/* =========================================================
+   14. CANDLE PATTERN
+========================================================= */
+
+function detectPattern(
+    candles
+) {
+
+    if (
         candles.length < 3
     ) {
 
@@ -2806,69 +5187,43 @@ function detectCandlePattern(
     }
 
 
-    const current =
-        candles[
-            candles.length - 1
-        ];
+    const a =
+        candles[candles.length - 3];
 
 
-    const previous =
-        candles[
-            candles.length - 2
-        ];
+    const b =
+        candles[candles.length - 2];
 
 
-    const open =
-        Number(current[1]);
+    const c =
+        candles[candles.length - 1];
 
 
-    const high =
-        Number(current[2]);
-
-
-    const low =
-        Number(current[3]);
-
-
-    const close =
-        Number(current[4]);
-
-
-    const prevOpen =
-        Number(previous[1]);
-
-
-    const prevClose =
-        Number(previous[4]);
-
-
-    const body =
+    const cBody =
         Math.abs(
-            close - open
+            c.close - c.open
         );
 
 
-    const upperWick =
-        high -
-        Math.max(
-            open,
-            close
-        );
+    const cRange =
+        c.high - c.low;
 
 
-    const lowerWick =
-        Math.min(
-            open,
-            close
-        ) - low;
-
-
-    // Bullish engulfing
     if (
-        close > open &&
-        prevClose < prevOpen &&
-        close >= prevOpen &&
-        open <= prevClose
+        cRange > 0 &&
+        cBody / cRange < 0.25
+    ) {
+
+        return "INDECISION";
+
+    }
+
+
+    if (
+        b.close < b.open &&
+        c.close > c.open &&
+        c.close > b.open &&
+        c.open < b.close
     ) {
 
         return "BULLISH ENGULFING";
@@ -2876,12 +5231,11 @@ function detectCandlePattern(
     }
 
 
-    // Bearish engulfing
     if (
-        close < open &&
-        prevClose > prevOpen &&
-        close <= prevOpen &&
-        open >= prevClose
+        b.close > b.open &&
+        c.close < c.open &&
+        c.close < b.open &&
+        c.open > b.close
     ) {
 
         return "BEARISH ENGULFING";
@@ -2889,11 +5243,25 @@ function detectCandlePattern(
     }
 
 
-    // Bullish rejection
+    const lowerWick =
+        Math.min(
+            c.open,
+            c.close
+        ) - c.low;
+
+
+    const upperWick =
+        c.high -
+        Math.max(
+            c.open,
+            c.close
+        );
+
+
     if (
         lowerWick >
-        body * 2 &&
-        close > open
+        cBody * 2 &&
+        upperWick < cBody
     ) {
 
         return "BULLISH REJECTION";
@@ -2901,11 +5269,10 @@ function detectCandlePattern(
     }
 
 
-    // Bearish rejection
     if (
         upperWick >
-        body * 2 &&
-        close < open
+        cBody * 2 &&
+        lowerWick < cBody
     ) {
 
         return "BEARISH REJECTION";
@@ -2913,346 +5280,80 @@ function detectCandlePattern(
     }
 
 
-    return "NORMAL";
+    return "NONE";
 
 }
 
 
+/* =========================================================
+   15. INDICATOR ENGINE
+========================================================= */
 
-// =========================================================
-// HIGHER TIMEFRAME ANALYSIS
-// =========================================================
-
-function analyzeHigherTimeframe(
+function calculateIndicators(
     candles
 ) {
 
-    if (
-        !candles ||
-        candles.length < 200
-    ) {
-
-        return {
-
-            bullish: false,
-
-            bearish: false,
-
-            bias: "UNKNOWN"
-
-        };
-
-    }
-
-
-    const prices =
-        candleCloses(candles);
-
-
-    const price =
-        prices[
-            prices.length - 1
-        ];
-
-
-    const ema50 =
-        EMA(prices, 50);
-
-
-    const ema200 =
-        EMA(prices, 200);
-
-
-    const rsi =
-        RSI(prices);
-
-
-    if (
-        price > ema50 &&
-        ema50 > ema200 &&
-        rsi > 50
-    ) {
-
-        return {
-
-            bullish: true,
-
-            bearish: false,
-
-            bias: "BULLISH"
-
-        };
-
-    }
-
-
-    if (
-        price < ema50 &&
-        ema50 < ema200 &&
-        rsi < 50
-    ) {
-
-        return {
-
-            bullish: false,
-
-            bearish: true,
-
-            bias: "BEARISH"
-
-        };
-
-    }
-
-
-    return {
-
-        bullish: false,
-
-        bearish: false,
-
-        bias: "NEUTRAL"
-
-    };
-
-}
-
-
-
-// =========================================================
-// PREMIUM MARKET ANALYSIS
-// =========================================================
-
-function analyzeGoldMarket() {
-
-    const candles =
-        goldMarket.candles15m;
-
-
-    if (
-        !candles ||
-        candles.length < 200
-    ) {
-
-        console.log(
-            "Waiting for enough XAUUSDT data..."
+    const closes =
+        candles.map(
+            c => c.close
         );
 
-        return null;
-
-    }
-
-
-    const prices =
-        candleCloses(candles);
-
-
-    const price =
-        prices[
-            prices.length - 1
-        ];
-
-
-    goldMarket.previousPrice =
-        goldMarket.price;
-
-
-    goldMarket.price =
-        price;
-
-
-
-    // -----------------------------------------------------
-    // INDICATORS
-    // -----------------------------------------------------
 
     const ema20 =
-        EMA(prices, 20);
+        calculateEMA(
+            closes,
+            20
+        );
 
 
     const ema50 =
-        EMA(prices, 50);
+        calculateEMA(
+            closes,
+            50
+        );
 
 
     const ema200 =
-        EMA(prices, 200);
+        calculateEMA(
+            closes,
+            200
+        );
 
 
     const rsi =
-        RSI(prices, 14);
-
-
-    const macd =
-        MACD(prices);
+        calculateRSI(
+            closes,
+            14
+        );
 
 
     const atr =
-        ATR(candles);
+        calculateATR(
+            candles,
+            14
+        );
+
+
+    const macd =
+        calculateMACD(
+            closes
+        );
+
+
+    const adx =
+        calculateADX(
+            candles,
+            14
+        );
 
 
     const vwap =
-        VWAP(candles);
-
-
-    const volume =
-        getVolumeStatus(candles);
-
-
-    const momentum =
-        calculateMomentum(
-            prices,
-            10
-        );
-
-
-    const momentumState =
-        momentumStatus(momentum);
-
-
-    const emaAlignment =
-        getEMAAlignment(prices);
-
-
-    const rsiState =
-        getRSIStatus(rsi);
-
-
-    const macdState =
-        getMACDStatus(
-            macd,
-            prices
-        );
-
-
-    const vwapState =
-        getVWAPStatus(
-            price,
-            vwap
-        );
-
-
-    const structure =
-        detectMarketStructure(
+        calculateVWAP(
             candles
         );
 
 
-    const sr =
-        findSupportResistance(
-            candles
-        );
-
-
-    const srLocation =
-        checkSRLocation(
-            price,
-            sr.support,
-            sr.resistance,
-            atr
-        );
-
-
-    const pattern =
-        detectCandlePattern(
-            candles
-        );
-
-
-    const higherTF =
-        analyzeHigherTimeframe(
-            goldMarket.candles1h
-        );
-
-
-
-    // -----------------------------------------------------
-    // TREND STRENGTH
-    // -----------------------------------------------------
-
-    const trend =
-        trendStrength(prices);
-
-
-    const trendStrong =
-        trend === "STRONG";
-
-
-
-    // -----------------------------------------------------
-    // BULLISH / BEARISH CONDITIONS
-    // -----------------------------------------------------
-
-    const priceAboveEMA =
-        price > ema20 &&
-        ema20 > ema50;
-
-
-    const priceBelowEMA =
-        price < ema20 &&
-        ema20 < ema50;
-
-
-    const rsiBullish =
-        rsiState === "BULLISH";
-
-
-    const rsiBearish =
-        rsiState === "BEARISH";
-
-
-    const macdBullish =
-        macdState === "BULLISH";
-
-
-    const macdBearish =
-        macdState === "BEARISH";
-
-
-    const priceAboveVWAP =
-        price > vwap;
-
-
-    const priceBelowVWAP =
-        price < vwap;
-
-
-    const emaAlignedBullish =
-        emaAlignment.bullish;
-
-
-    const emaAlignedBearish =
-        emaAlignment.bearish;
-
-
-    const volumeConfirmed =
-        volume === "HIGH" ||
-        volume === "VERY HIGH";
-
-
-    const momentumConfirmed =
-        momentumState !== "NEUTRAL";
-
-
-    const structureConfirmed =
-        structure.bullish ||
-        structure.bearish;
-
-
-    const htfConfirmed =
-        higherTF.bullish ||
-        higherTF.bearish;
-
-
-
-    // -----------------------------------------------------
-    // FINAL DATA FOR SIGNAL ENGINE
-    // -----------------------------------------------------
-
-    const analysisData = {
-
-        price,
-
-        atr,
+    return {
 
         ema20,
 
@@ -3262,1555 +5363,173 @@ function analyzeGoldMarket() {
 
         rsi,
 
+        atr,
+
         macd,
 
-        vwap,
+        adx,
 
-        volume,
-
-        momentum,
-
-        momentumState,
-
-        trend,
-
-        trendStrong,
-
-        priceAboveEMA,
-
-        priceBelowEMA,
-
-        rsiBullish,
-
-        rsiBearish,
-
-        rsiConfirmed:
-            rsiBullish ||
-            rsiBearish,
-
-        macdBullish,
-
-        macdBearish,
-
-        macdConfirmed:
-            macdBullish ||
-            macdBearish,
-
-        priceAboveVWAP,
-
-        priceBelowVWAP,
-
-        vwapConfirmed:
-            priceAboveVWAP ||
-            priceBelowVWAP,
-
-        emaAligned:
-            emaAlignedBullish ||
-            emaAlignedBearish,
-
-        volumeConfirmed,
-
-        momentumConfirmed,
-
-        structureConfirmed,
-
-        htfConfirmed,
-
-        htfBullish:
-            higherTF.bullish,
-
-        htfBearish:
-            higherTF.bearish,
-
-        structure,
-
-        support:
-            sr.support,
-
-        resistance:
-            sr.resistance,
-
-        srLocation,
-
-        pattern
+        vwap
 
     };
 
-
-
-    // -----------------------------------------------------
-    // SIGNAL
-    // -----------------------------------------------------
-
-    const signal =
-        createGoldSignal(
-            analysisData
-        );
-
-
-    goldMarket.signal =
-        signal;
-
-
-    goldMarket.analysis =
-        analysisData;
-
-
-
-    // -----------------------------------------------------
-    // LOG FOR DEBUGGING
-    // -----------------------------------------------------
-
-    console.log(
-        "=============================="
-    );
-
-
-    console.log(
-        "XAUUSD MARKET ANALYSIS"
-    );
-
-
-    console.log(
-        "Price:",
-        price
-    );
-
-
-    console.log(
-        "Signal:",
-        signal.signal
-    );
-
-
-    console.log(
-        "Bias:",
-        signal.bias
-    );
-
-
-    console.log(
-        "Quality:",
-        signal.confidence + "%"
-    );
-
-
-    console.log(
-        "RSI:",
-        rsi.toFixed(2)
-    );
-
-
-    console.log(
-        "MACD:",
-
+}
 
 
 /* =========================================================
-   XAUUSD PREMIUM TRADING PLATFORM
-   JS PART 5 — FINAL
-   ========================================================= */
-
-
-/* =========================================================
-   XAUUSD PIP CONFIGURATION
-   ========================================================= */
-
-/*
-   GOLD RULE USED BY THIS PLATFORM:
-
-   $1.00 MOVE = 10 PIPS
-
-   Therefore:
-
-   $0.10 = 1 pip
-   $1.00 = 10 pips
-   $10.00 = 100 pips
-
-   For 0.01 lot:
-
-   10 pips ≈ $1
-
-   Profit formula:
-
-   Profit = Pips × Lot Size × $10
-
-   Example:
-
-   50 pips × 0.01 × $10
-   = $5
-*/
-
-
-const XAU_PIP_SIZE = 0.10;
-
-const XAU_PIP_VALUE_PER_LOT = 10;
-
-
-
-/* =========================================================
-   SIGNAL CONFIGURATION
-   ========================================================= */
-
-const XAU_SIGNAL_CONFIG = {
-
-    minimumScore: 7,
-
-    maximumConfidence: 95,
-
-    minimumATR: 0.30,
-
-    riskATRMultiplier: 1.20,
-
-    reward1ATRMultiplier: 1.00,
-
-    reward2ATRMultiplier: 1.80,
-
-    reward3ATRMultiplier: 2.60
-
-};
-
-
-
-/* =========================================================
-   CREATE PREMIUM SIGNAL
-   ========================================================= */
-
-function createGoldSignal(data) {
-
-    let bullish = 0;
-
-    let bearish = 0;
-
-
-    const reasonsBullish = [];
-
-    const reasonsBearish = [];
-
-
-
-    /* EMA TREND */
-
-    if (data.priceAboveEMA) {
-
-        bullish++;
-
-        reasonsBullish.push(
-            "EMA trend bullish"
-        );
-
-    }
-
-
-    if (data.priceBelowEMA) {
-
-        bearish++;
-
-        reasonsBearish.push(
-            "EMA trend bearish"
-        );
-
-    }
-
-
-
-    /* EMA ALIGNMENT */
-
-    if (data.emaAligned) {
-
-        if (
-            data.emaAlignedBullish ||
-            (
-                data.ema20 >
-                data.ema50 &&
-                data.ema50 >
-                data.ema200
-            )
-        ) {
-
-            bullish++;
-
-            reasonsBullish.push(
-                "EMA alignment bullish"
-            );
-
-        }
-
-
-        if (
-            data.emaAlignedBearish ||
-            (
-                data.ema20 <
-                data.ema50 &&
-                data.ema50 <
-                data.ema200
-            )
-        ) {
-
-            bearish++;
-
-            reasonsBearish.push(
-                "EMA alignment bearish"
-            );
-
-        }
-
-    }
-
-
-
-    /* RSI */
-
-    if (data.rsiBullish) {
-
-        bullish++;
-
-        reasonsBullish.push(
-            "RSI momentum bullish"
-        );
-
-    }
-
-
-    if (data.rsiBearish) {
-
-        bearish++;
-
-        reasonsBearish.push(
-            "RSI momentum bearish"
-        );
-
-    }
-
-
-
-    /* MACD */
-
-    if (data.macdBullish) {
-
-        bullish++;
-
-        reasonsBullish.push(
-            "MACD bullish"
-        );
-
-    }
-
-
-    if (data.macdBearish) {
-
-        bearish++;
-
-        reasonsBearish.push(
-            "MACD bearish"
-        );
-
-    }
-
-
-
-    /* VWAP */
-
-    if (data.priceAboveVWAP) {
-
-        bullish++;
-
-        reasonsBullish.push(
-            "Price above VWAP"
-        );
-
-    }
-
-
-    if (data.priceBelowVWAP) {
-
-        bearish++;
-
-        reasonsBearish.push(
-            "Price below VWAP"
-        );
-
-    }
-
-
-
-    /* MARKET STRUCTURE */
+   16. SIGNAL SCORING ENGINE
+========================================================= */
+
+function buildSignal(
+    candles,
+    indicators,
+    sr,
+    structure,
+    pattern
+) {
 
     if (
-        data.structure &&
-        data.structure.bullish
-    ) {
-
-        bullish += 2;
-
-        reasonsBullish.push(
-            "Bullish market structure"
-        );
-
-    }
-
-
-    if (
-        data.structure &&
-        data.structure.bearish
-    ) {
-
-        bearish += 2;
-
-        reasonsBearish.push(
-            "Bearish market structure"
-        );
-
-    }
-
-
-
-    /* HIGHER TIMEFRAME */
-
-    if (data.htfBullish) {
-
-        bullish += 2;
-
-        reasonsBullish.push(
-            "Higher timeframe bullish"
-        );
-
-    }
-
-
-    if (data.htfBearish) {
-
-        bearish += 2;
-
-        reasonsBearish.push(
-            "Higher timeframe bearish"
-        );
-
-    }
-
-
-
-    /* MOMENTUM */
-
-    if (
-        data.momentumState ===
-        "BULLISH"
-    ) {
-
-        bullish++;
-
-        reasonsBullish.push(
-            "Positive momentum"
-        );
-
-    }
-
-
-    if (
-        data.momentumState ===
-        "BEARISH"
-    ) {
-
-        bearish++;
-
-        reasonsBearish.push(
-            "Negative momentum"
-        );
-
-    }
-
-
-
-    /* VOLUME */
-
-    if (data.volumeConfirmed) {
-
-        if (
-            bullish > bearish
-        ) {
-
-            bullish++;
-
-            reasonsBullish.push(
-                "Volume confirmation"
-            );
-
-        }
-
-        else if (
-            bearish > bullish
-        ) {
-
-            bearish++;
-
-            reasonsBearish.push(
-                "Volume confirmation"
-            );
-
-        }
-
-    }
-
-
-
-    /* CANDLE PATTERN */
-
-    if (
-        data.pattern ===
-        "BULLISH ENGULFING" ||
-        data.pattern ===
-        "BULLISH REJECTION"
-    ) {
-
-        bullish += 2;
-
-        reasonsBullish.push(
-            data.pattern
-        );
-
-    }
-
-
-    if (
-        data.pattern ===
-        "BEARISH ENGULFING" ||
-        data.pattern ===
-        "BEARISH REJECTION"
-    ) {
-
-        bearish += 2;
-
-        reasonsBearish.push(
-            data.pattern
-        );
-
-    }
-
-
-
-    /* =====================================================
-       AVOID BAD CONDITIONS
-       ===================================================== */
-
-    const marketTooWeak =
-        !data.trendStrong &&
-        Math.abs(data.momentum) < 0.10;
-
-
-    const ATRTooSmall =
-        data.atr <
-        XAU_SIGNAL_CONFIG.minimumATR;
-
-
-
-    /*
-       If market is weak or volatility is too small,
-       WAIT is safer than forcing a trade.
-    */
-
-    if (
-        marketTooWeak ||
-        ATRTooSmall
+        candles.length < 50
     ) {
 
         return {
 
-            signal: "WAIT",
-
-            bias: "Neutral",
+            direction: "WAIT",
 
             confidence: 0,
 
-            bullishScore: bullish,
-
-            bearishScore: bearish,
-
-            reasonsBullish,
-
-            reasonsBearish,
-
-            entry: null,
-
-            sl: null,
-
-            tp1: null,
-
-            tp2: null,
-
-            tp3: null,
-
-            slPips: 0,
-
-            tp1Pips: 0,
-
-            tp2Pips: 0,
-
-            tp3Pips: 0
+            reason:
+                "Collecting sufficient market data."
 
         };
 
     }
 
 
-
-    /* =====================================================
-       FINAL DECISION
-       ===================================================== */
-
-    let signal =
-        "WAIT";
-
-    let bias =
-        "Neutral";
-
-    let winningScore =
-        Math.max(
-            bullish,
-            bearish
-        );
+    const price =
+        candles[candles.length - 1].close;
 
 
-    let confidence = 0;
+    let longScore = 0;
+
+    let shortScore = 0;
 
 
+    const reasonsLong = [];
+
+    const reasonsShort = [];
+
+
+    /* EMA TREND */
 
     if (
-        bullish >=
-        XAU_SIGNAL_CONFIG.minimumScore &&
-        bullish >
-        bearish
+        indicators.ema20 !== null &&
+        indicators.ema50 !== null
     ) {
-
-        signal =
-            "LONG";
-
-        bias =
-            "Bullish";
-
-
-        confidence =
-            Math.min(
-                XAU_SIGNAL_CONFIG.maximumConfidence,
-                55 + bullish * 5
-            );
-
-    }
-
-
-
-    else if (
-        bearish >=
-        XAU_SIGNAL_CONFIG.minimumScore &&
-        bearish >
-        bullish
-    ) {
-
-        signal =
-            "SHORT";
-
-        bias =
-            "Bearish";
-
-
-        confidence =
-            Math.min(
-                XAU_SIGNAL_CONFIG.maximumConfidence,
-                55 + bearish * 5
-            );
-
-    }
-
-
-
-    /* =====================================================
-       REQUIRE STRONGER CONFIRMATION
-       ===================================================== */
-
-    if (
-        signal === "LONG"
-    ) {
-
-        /*
-           Avoid LONG directly under strong resistance.
-        */
 
         if (
-            data.srLocation ===
-            "NEAR RESISTANCE"
+            price >
+            indicators.ema20 &&
+            indicators.ema20 >
+            indicators.ema50
         ) {
 
-            signal =
-                "WAIT";
+            longScore += 18;
 
-            bias =
-                "Neutral";
-
-            confidence =
-                0;
+            reasonsLong.push(
+                "EMA trend aligned bullish"
+            );
 
         }
 
-    }
-
-
-
-    if (
-        signal === "SHORT"
-    ) {
-
-        /*
-           Avoid SHORT directly above strong support.
-        */
 
         if (
-            data.srLocation ===
-            "NEAR SUPPORT"
+            price <
+            indicators.ema20 &&
+            indicators.ema20 <
+            indicators.ema50
         ) {
 
-            signal =
-                "WAIT";
+            shortScore += 18;
 
-            bias =
-                "Neutral";
-
-            confidence =
-                0;
+            reasonsShort.push(
+                "EMA trend aligned bearish"
+            );
 
         }
 
     }
 
 
-
-    /* =====================================================
-       ENTRY / SL / TP
-       ===================================================== */
-
-    let entry = null;
-
-    let sl = null;
-
-    let tp1 = null;
-
-    let tp2 = null;
-
-    let tp3 = null;
-
-
-    let slPips = 0;
-
-    let tp1Pips = 0;
-
-    let tp2Pips = 0;
-
-    let tp3Pips = 0;
-
-
+    /* EMA 200 */
 
     if (
-        signal === "LONG"
+        indicators.ema200 !== null
     ) {
 
-        entry =
-            data.price;
-
-
-        /*
-           ATR based stop.
-           This adapts to actual gold volatility.
-        */
-
-        const riskDistance =
-            Math.max(
-                data.atr *
-                XAU_SIGNAL_CONFIG.riskATRMultiplier,
-                0.50
-            );
-
-
-        const reward1 =
-            Math.max(
-                data.atr *
-                XAU_SIGNAL_CONFIG.reward1ATRMultiplier,
-                riskDistance *
-                0.90
-            );
-
-
-        const reward2 =
-            Math.max(
-                data.atr *
-                XAU_SIGNAL_CONFIG.reward2ATRMultiplier,
-                riskDistance *
-                1.50
-            );
-
-
-        const reward3 =
-            Math.max(
-                data.atr *
-                XAU_SIGNAL_CONFIG.reward3ATRMultiplier,
-                riskDistance *
-                2.10
-            );
-
-
-        sl =
-            entry -
-            riskDistance;
-
-
-        tp1 =
-            entry +
-            reward1;
-
-
-        tp2 =
-            entry +
-            reward2;
-
-
-        tp3 =
-            entry +
-            reward3;
-
-
-        slPips =
-            priceDistanceToPips(
-                entry,
-                sl
-            );
-
-
-        tp1Pips =
-            priceDistanceToPips(
-                entry,
-                tp1
-            );
-
-
-        tp2Pips =
-            priceDistanceToPips(
-                entry,
-                tp2
-            );
-
-
-        tp3Pips =
-            priceDistanceToPips(
-                entry,
-                tp3
-            );
-
-    }
-
-
-
-    else if (
-        signal === "SHORT"
-    ) {
-
-        entry =
-            data.price;
-
-
-        const riskDistance =
-            Math.max(
-                data.atr *
-                XAU_SIGNAL_CONFIG.riskATRMultiplier,
-                0.50
-            );
-
-
-        const reward1 =
-            Math.max(
-                data.atr *
-                XAU_SIGNAL_CONFIG.reward1ATRMultiplier,
-                riskDistance *
-                0.90
-            );
-
-
-        const reward2 =
-            Math.max(
-                data.atr *
-                XAU_SIGNAL_CONFIG.reward2ATRMultiplier,
-                riskDistance *
-                1.50
-            );
-
-
-        const reward3 =
-            Math.max(
-                data.atr *
-                XAU_SIGNAL_CONFIG.reward3ATRMultiplier,
-                riskDistance *
-                2.10
-            );
-
-
-        sl =
-            entry +
-            riskDistance;
-
-
-        tp1 =
-            entry -
-            reward1;
-
-
-        tp2 =
-            entry -
-            reward2;
-
-
-        tp3 =
-            entry -
-            reward3;
-
-
-        slPips =
-            priceDistanceToPips(
-                entry,
-                sl
-            );
-
-
-        tp1Pips =
-            priceDistanceToPips(
-                entry,
-                tp1
-            );
-
-
-        tp2Pips =
-            priceDistanceToPips(
-                entry,
-                tp2
-            );
-
-
-        tp3Pips =
-            priceDistanceToPips(
-                entry,
-                tp3
-            );
-
-    }
-
-
-
-    return {
-
-        signal,
-
-        bias,
-
-        confidence,
-
-        bullishScore:
-            bullish,
-
-        bearishScore:
-            bearish,
-
-        winningScore,
-
-        reasonsBullish,
-
-        reasonsBearish,
-
-        entry,
-
-        sl,
-
-        tp1,
-
-        tp2,
-
-        tp3,
-
-        slPips,
-
-        tp1Pips,
-
-        tp2Pips,
-
-        tp3Pips
-
-    };
-
-}
-
-
-
-/* =========================================================
-   PRICE DISTANCE → PIPS
-   ========================================================= */
-
-function priceDistanceToPips(
-    price1,
-    price2
-) {
-
-    return Math.round(
-
-        Math.abs(
-            price1 - price2
-        ) /
-        XAU_PIP_SIZE
-
-    );
-
-}
-
-
-
-/* =========================================================
-   PIPS → PRICE DISTANCE
-   ========================================================= */
-
-function pipsToPrice(
-    pips
-) {
-
-    return (
-        Number(pips) *
-        XAU_PIP_SIZE
-    );
-
-}
-
-
-
-/* =========================================================
-   FORMAT GOLD PRICE
-   ========================================================= */
-
-function formatGoldPrice(
-    price
-) {
-
-    if (
-        price === null ||
-        price === undefined ||
-        !Number.isFinite(
-            Number(price)
-        )
-    ) {
-
-        return "--";
-
-    }
-
-
-    return Number(price)
-        .toFixed(2);
-
-}
-
-
-
-/* =========================================================
-   FORMAT PIPS
-   ========================================================= */
-
-function formatPips(
-    pips
-) {
-
-    if (
-        pips === null ||
-        pips === undefined
-    ) {
-
-        return "--";
-
-    }
-
-
-    return Math.round(
-        Number(pips)
-    ) + " pips";
-
-}
-
-
-
-/* =========================================================
-   SIGNAL UI
-   ========================================================= */
-
-function renderGoldSignal() {
-
-    const result =
-        goldMarket.signal;
-
-
-    if (!result) {
-
-        return;
-
-    }
-
-
-    const signal =
-        result.signal;
-
-
-
-    /* Main signal */
-
-    setText(
-        "gold-signal",
-        signal
-    );
-
-
-    setText(
-        "xau-signal",
-        signal
-    );
-
-
-    setText(
-        "signal-direction",
-        signal
-    );
-
-
-
-    /* Bias */
-
-    setText(
-        "gold-bias",
-        result.bias
-    );
-
-
-    setText(
-        "xau-bias",
-        result.bias
-    );
-
-
-
-    /* Confidence */
-
-    setText(
-        "gold-confidence",
-        result.confidence
-            ? result.confidence + "%"
-            : "--"
-    );
-
-
-
-    /* Entry */
-
-    setText(
-        "gold-entry",
-        result.entry
-            ? "$" +
-              formatGoldPrice(
-                  result.entry
-              )
-            : "--"
-    );
-
-
-
-    /* SL */
-
-    setText(
-        "gold-sl",
-        result.sl
-            ? "$" +
-              formatGoldPrice(
-                  result.sl
-              )
-            : "--"
-    );
-
-
-    setText(
-        "gold-sl-pips",
-        result.slPips
-            ? formatPips(
-                  result.slPips
-              )
-            : "--"
-    );
-
-
-
-    /* TP1 */
-
-    setText(
-        "gold-tp1",
-        result.tp1
-            ? "$" +
-              formatGoldPrice(
-                  result.tp1
-              )
-            : "--"
-    );
-
-
-    setText(
-        "gold-tp1-pips",
-        result.tp1Pips
-            ? formatPips(
-                  result.tp1Pips
-              )
-            : "--"
-    );
-
-
-
-    /* TP2 */
-
-    setText(
-        "gold-tp2",
-        result.tp2
-            ? "$" +
-              formatGoldPrice(
-                  result.tp2
-              )
-            : "--"
-    );
-
-
-    setText(
-        "gold-tp2-pips",
-        result.tp2Pips
-            ? formatPips(
-                  result.tp2Pips
-              )
-            : "--"
-    );
-
-
-
-    /* TP3 */
-
-    setText(
-        "gold-tp3",
-        result.tp3
-            ? "$" +
-              formatGoldPrice(
-                  result.tp3
-              )
-            : "--"
-    );
-
-
-    setText(
-        "gold-tp3-pips",
-        result.tp3Pips
-            ? formatPips(
-                  result.tp3Pips
-              )
-            : "--"
-    );
-
-
-
-    /* Score */
-
-    setText(
-        "bullish-score",
-        result.bullishScore
-    );
-
-
-    setText(
-        "bearish-score",
-        result.bearishScore
-    );
-
-
-
-    /* Signal color */
-
-    const signalElements = [
-
-        document.getElementById(
-            "gold-signal"
-        ),
-
-        document.getElementById(
-            "xau-signal"
-        ),
-
-        document.getElementById(
-            "signal-direction"
-        )
-
-    ];
-
-
-    signalElements.forEach(
-        element => {
-
-            if (!element)
-                return;
-
-
-            element.classList.remove(
-                "buy",
-                "sell",
-                "wait"
-            );
-
-
-            if (
-                signal === "LONG"
-            ) {
-
-                element.classList.add(
-                    "buy"
-                );
-
-            }
-
-
-            else if (
-                signal === "SHORT"
-            ) {
-
-                element.classList.add(
-                    "sell"
-                );
-
-            }
-
-
-            else {
-
-                element.classList.add(
-                    "wait"
-                );
-
-            }
+        if (
+            price >
+            indicators.ema200
+        ) {
+
+            longScore += 10;
 
         }
-    );
+
+        else if (
+            price <
+            indicators.ema200
+        ) {
+
+            shortScore += 10;
+
+        }
+
+    }
 
 
-
-    renderAnalysisText();
-
-}
-
-
-
-/* =========================================================
-   ANALYSIS TEXT
-   ========================================================= */
-
-function renderAnalysisText() {
-
-    const data =
-        goldMarket.analysis;
-
-
-    const result =
-        goldMarket.signal;
-
+    /* RSI */
 
     if (
-        !data ||
-        !result
+        indicators.rsi !== null
     ) {
 
-        return;
+        if (
+            indicators.rsi >= 52 &&
+            indicators.rsi <= 68
+        ) {
 
-    }
+            longScore += 12;
 
+            reasonsLong.push(
+                "Bullish RSI momentum"
+            );
 
-    let text = "";
+        }
 
 
+        if (
+            indicators.rsi <= 48 &&
+            indicators.rsi >= 32
+        ) {
 
-    if (
-        result.signal ===
-        "LONG"
-    ) {
+            shortScore += 12;
 
-        text =
-            "Bullish setup detected. " +
-            "Price structure, momentum and " +
-            "trend conditions are supporting " +
-            "a potential LONG setup.";
+            reasonsShort.push(
+                "Bearish RSI momentum"
+            );
 
-    }
+        }
 
 
+        /* Avoid chasing extreme RSI */
 
-    else if (
-        result.signal ===
-        "SHORT"
-    ) {
+        if (
+            indicators.rsi > 75
+        ) {
 
-        text =
-            "Bearish setup detected. " +
-            "Market structure, momentum and " +
-            "trend conditions are supporting " +
-            "a potential SHORT setup.";
+  
 
-    }
-
-
-
-    else {
-
-        text =
-            "WAIT — the market does not currently " +
-            "have enough high-quality confirmation. " +
-            "No forced trade is generated.";
-
-    }
-
-
-
-    const details =
-
-        ` RSI: ${data.rsi.toFixed(2)} | ` +
-
-        `MACD: ${data.macd > 0
-            ? "Positive"
-            : "Negative"} | ` +
-
-        `VWAP: ${data.vwapState} | ` +
-
-        `Structure: ${data.structure.status} | ` +
-
-        `Volume: ${data.volume} | ` +
-
-        `Momentum: ${data.momentumState} | ` +
-
-        `HTF: ${data.htfBullish
-            ? "Bullish"
-            : data.htfBearish
-                ? "Bearish"
-                : "Neutral"} | ` +
-
-        `Pattern: ${data.pattern}`;
-
-
-    const finalText =
-        text + details;
-
-
-
-    setText(
-        "gold-analysis",
-        finalText
-    );
-
-
-    setText(
-        "xau-analysis",
-        finalText
-    );
-
-
-    setText(
-        "live-analysis",
-        finalText
-    );
-
-}
-
-
-
-/* =========================================================
-   INDICATOR UI
-   ========================================================= */
-
-function renderGoldIndicators() {
-
-    const data =
-        goldMarket.analysis;
-
-
-    if (!data)
-        return;
-
-
-
-    setText(
-        "gold-rsi",
-        data.rsi.toFixed(2)
-    );
-
-
-    setText(
-        "gold-ema",
-        data.ema20 > data.ema50
-            ? "Bullish"
-            : "Bearish"
-    );
-
-
-    setText(
-        "gold-macd",
-        data.macd > 0
-            ? "Positive"
-            : "Negative"
-    );
-
-
-    setText(
-        "gold-adx",
-        data.trend
-    );
-
-
-    setText(
-        "gold-vwap",
-        data.priceAboveVWAP
-            ? "Above"
-            : "Below"
-    );
-
-
-    setText(
-        "gold-atr",
-        data.atr.toFixed(2)
-    );
-
-
-    setText(
-        "gold-volume",
-        data.volume
-    );
-
-
-    setText(
-        "gold-structure",
-        data.structure.status
-    );
-
-
-    setText(
-        "gold-pattern",
-        data.pattern
-    );
-
-
-    setText(
-        "gold-support",
-        data.support
-            ? "$" +
-              data.support.toFixed(2)
-            : "--"
-    );
-
-
-    setText(
-        "gold-resistance",
-    
-
-      
+           
+               
+           
