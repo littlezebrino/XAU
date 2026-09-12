@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,23 +5,29 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <meta name="theme-color"
-          content="#050505">
+    <meta
+        name="theme-color"
+        content="#050505"
+    >
 
-    <meta name="description"
-          content="Premium XAUUSDT Gold Trading Analysis and Smart Signals">
+    <meta
+        name="description"
+        content="Qayyum OfficialZ Premium Gold Intelligence Dashboard"
+    >
 
-    <title>Qayyum OfficialZ — XAUUSDT Intelligence</title>
+    <title>
+        Qayyum OfficialZ — Gold Intelligence
+    </title>
 
-    <!-- =========================
-         MAIN CSS
-    ========================== -->
-
-    <link rel="stylesheet"
-          href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 
 </head>
 
@@ -30,44 +35,60 @@
 <body>
 
 
-<!-- =====================================================
+<!-- =========================================================
      APP LOADER
-====================================================== -->
+========================================================= -->
 
 <div id="app-loader">
 
-    <div class="loader-logo">
-        QOZ
+    <div class="loader-content">
+
+        <div class="loader-logo">
+            Q
+        </div>
+
+        <div class="loader-brand">
+            QAYYUM OFFICIALZ
+        </div>
+
+        <div class="loader-subtitle">
+            GOLD INTELLIGENCE
+        </div>
+
+        <div class="loader-line">
+            <span></span>
+        </div>
+
+        <div class="loader-status">
+            INITIALIZING MARKET ENGINE...
+        </div>
+
     </div>
-
-    <div class="loader-line"></div>
-
-    <p>
-        Initializing Gold Intelligence...
-    </p>
 
 </div>
 
 
 
-<!-- =====================================================
+<!-- =========================================================
      MAIN APPLICATION
-====================================================== -->
+========================================================= -->
 
 <main id="app">
 
 
-<!-- =====================================================
+<!-- =========================================================
      TOP NAVIGATION
-====================================================== -->
+========================================================= -->
 
 <header class="topbar">
 
+
     <div class="brand">
 
-        <div class="brand-mark">
+        <div class="brand-logo">
             Q
         </div>
+
 
         <div class="brand-text">
 
@@ -85,273 +106,584 @@
 
 
 
-    <div class="market-status">
+    <div class="topbar-right">
 
-        <span class="status-dot"></span>
 
-        <span id="market-status-text">
-            MARKET CONNECTING
-        </span>
+        <div class="live-market-status">
+
+            <span
+                id="status-dot"
+                class="status-dot"
+            ></span>
+
+            <span id="market-status-text">
+                MARKET CONNECTING
+            </span>
+
+        </div>
+
+
+        <div
+            id="market-clock"
+            class="market-clock"
+        >
+            --:--:--
+        </div>
+
 
     </div>
+
 
 </header>
 
 
 
-<!-- =====================================================
-     HERO / LIVE GOLD PRICE
-====================================================== -->
+<!-- =========================================================
+     LIVE GOLD HERO
+========================================================= -->
 
 <section class="hero-panel">
 
+
+    <div class="hero-background-glow"></div>
+
+
     <div class="hero-left">
+
 
         <div class="instrument-label">
 
             <span class="live-dot"></span>
 
-            LIVE MARKET
+            LIVE GOLD MARKET
 
         </div>
 
 
-        <h2>
-            XAUUSD
-        </h2>
+        <div class="symbol-row">
+
+            <div>
+
+                <h2>
+                    XAUUSD
+                </h2>
+
+                <p>
+                    GOLD / US DOLLAR
+                </p>
+
+            </div>
 
 
-        <p class="instrument-name">
-            GOLD / US DOLLAR
-        </p>
+            <div class="feed-badge">
 
+                <span>
+                    FEED
+                </span>
+
+                <strong>
+                    XAUUSDT
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             LIVE PRICE
+        ================================================== -->
 
         <div class="live-price-row">
 
-            <span id="gold-price">
-                Loading...
-            </span>
-
-            <span id="gold-change"
-                  class="price-change">
+            <div
+                id="gold-price"
+                class="gold-price"
+            >
                 --
-            </span>
+            </div>
+
+
+            <div
+                id="gold-change"
+                class="gold-change neutral"
+            >
+                --
+            </div>
 
         </div>
 
+
+
+        <!-- =================================================
+             MARKET META
+        ================================================== -->
 
         <div class="market-meta">
 
-            <div>
-                <span>Bid</span>
-                <strong id="gold-bid">--</strong>
+
+            <div class="meta-card">
+
+                <span>
+                    BID
+                </span>
+
+                <strong id="gold-bid">
+                    --
+                </strong>
+
             </div>
 
-            <div>
-                <span>Ask</span>
-                <strong id="gold-ask">--</strong>
+
+            <div class="meta-card">
+
+                <span>
+                    ASK
+                </span>
+
+                <strong id="gold-ask">
+                    --
+                </strong>
+
             </div>
 
-            <div>
-                <span>Spread</span>
-                <strong id="gold-spread">--</strong>
+
+            <div class="meta-card">
+
+                <span>
+                    SPREAD
+                </span>
+
+                <strong id="gold-spread">
+                    --
+                </strong>
+
             </div>
 
-            <div>
-                <span>Updated</span>
-                <strong id="price-updated">--</strong>
+
+            <div class="meta-card">
+
+                <span>
+                    UPDATED
+                </span>
+
+                <strong id="price-updated">
+                    --
+                </strong>
+
             </div>
+
 
         </div>
+
 
     </div>
 
 
 
+    <!-- =====================================================
+         HERO RIGHT
+    ====================================================== -->
+
     <div class="hero-right">
 
-        <div class="market-session">
 
-            <span class="small-label">
+        <div class="premium-metric-card">
+
+
+            <span class="metric-label">
                 MARKET SESSION
             </span>
+
 
             <strong id="market-session">
                 --
             </strong>
 
+
+            <small id="session-detail">
+                Detecting session...
+            </small>
+
+
         </div>
 
 
-        <div class="gold-pips">
 
-            <span class="small-label">
-                GOLD PIP VALUE
+        <div class="premium-metric-card">
+
+
+            <span class="metric-label">
+                GOLD PIP MODEL
             </span>
 
+
             <strong>
-                $1 MOVE = 10 PIPS
+                $0.10 = 1 PIP
             </strong>
+
+
+            <small>
+                $1.00 = 10 PIPS
+            </small>
+
 
         </div>
 
+
+
+        <div class="premium-metric-card">
+
+
+            <span class="metric-label">
+                ANALYSIS ENGINE
+            </span>
+
+
+            <strong
+                id="engine-status"
+                class="engine-starting"
+            >
+                STARTING
+            </strong>
+
+
+            <small>
+                Multi-factor confirmation
+            </small>
+
+
+        </div>
+
+
     </div>
+
 
 </section>
 
 
 
-<!-- =====================================================
+<!-- =========================================================
      MARKET OVERVIEW
-====================================================== -->
+========================================================= -->
 
-<section class="overview-grid">
+<section class="overview-section">
 
-
-    <div class="overview-card">
-
-        <span>
-            TREND
-        </span>
-
-        <strong id="overview-trend">
-            Analyzing...
-        </strong>
-
-    </div>
-
-
-
-    <div class="overview-card">
-
-        <span>
-            MOMENTUM
-        </span>
-
-        <strong id="overview-momentum">
-            Analyzing...
-        </strong>
-
-    </div>
-
-
-
-    <div class="overview-card">
-
-        <span>
-            VOLATILITY
-        </span>
-
-        <strong id="overview-volatility">
-            Analyzing...
-        </strong>
-
-    </div>
-
-
-
-    <div class="overview-card">
-
-        <span>
-            MARKET STRUCTURE
-        </span>
-
-        <strong id="overview-structure">
-            Analyzing...
-        </strong>
-
-    </div>
-
-
-</section>
-
-
-
-<!-- =====================================================
-     SMART SIGNAL
-====================================================== -->
-
-<section class="signal-section">
 
     <div class="section-heading">
+
 
         <div>
 
             <span class="section-kicker">
-                AI MARKET ENGINE
+                MARKET SNAPSHOT
+            </span>
+
+            <h2>
+                Gold Market Overview
+            </h2>
+
+        </div>
+
+
+        <div class="section-live-badge">
+
+            <span class="live-dot"></span>
+
+            LIVE ANALYSIS
+
+        </div>
+
+
+    </div>
+
+
+
+    <div class="overview-grid">
+
+
+        <!-- TREND -->
+
+        <div class="overview-card">
+
+
+            <div class="overview-icon trend-icon">
+                T
+            </div>
+
+
+            <div class="overview-content">
+
+                <span>
+                    TREND
+                </span>
+
+                <strong id="overview-trend">
+                    WAITING
+                </strong>
+
+                <small id="overview-trend-detail">
+                    Waiting for market data
+                </small>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- MOMENTUM -->
+
+        <div class="overview-card">
+
+
+            <div class="overview-icon momentum-icon">
+                M
+            </div>
+
+
+            <div class="overview-content">
+
+                <span>
+                    MOMENTUM
+                </span>
+
+                <strong id="overview-momentum">
+                    WAITING
+                </strong>
+
+                <small id="overview-momentum-detail">
+                    Waiting for confirmation
+                </small>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- VOLATILITY -->
+
+        <div class="overview-card">
+
+
+            <div class="overview-icon volatility-icon">
+                V
+            </div>
+
+
+            <div class="overview-content">
+
+                <span>
+                    VOLATILITY
+                </span>
+
+                <strong id="overview-volatility">
+                    WAITING
+                </strong>
+
+                <small id="overview-volatility-detail">
+                    Measuring ATR
+                </small>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- STRUCTURE -->
+
+        <div class="overview-card">
+
+
+            <div class="overview-icon structure-icon">
+                S
+            </div>
+
+
+            <div class="overview-content">
+
+                <span>
+                    STRUCTURE
+                </span>
+
+                <strong id="overview-structure">
+                    WAITING
+                </strong>
+
+                <small id="overview-structure-detail">
+                    Detecting market structure
+                </small>
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+
+<!-- =========================================================
+     SMART GOLD SIGNAL
+========================================================= -->
+
+<section class="signal-section">
+
+
+    <div class="section-heading">
+
+
+        <div>
+
+            <span class="section-kicker">
+                PREMIUM SIGNAL ENGINE
             </span>
 
             <h2>
                 Smart Gold Signal
             </h2>
 
+            <p>
+                Technical + price action + structure confirmation
+            </p>
+
         </div>
 
 
-        <div class="analysis-timeframe">
+        <div class="signal-timeframe-box">
 
             <span>
-                ANALYSIS
+                SIGNAL TIMEFRAME
             </span>
 
-            <strong id="active-timeframe">
+            <strong id="signal-timeframe">
                 15M
             </strong>
 
         </div>
 
+
     </div>
 
 
 
-    <div class="main-signal-card">
+    <!-- =====================================================
+         MAIN SIGNAL CARD
+    ====================================================== -->
+
+    <div
+        id="signal-card"
+        class="main-signal-card wait"
+    >
 
 
         <div class="signal-main">
 
-            <span class="signal-label">
+
+            <div class="signal-label">
                 CURRENT SIGNAL
-            </span>
+            </div>
 
 
-            <h3 id="main-signal">
+            <div
+                id="main-signal"
+                class="main-signal"
+            >
                 WAIT
-            </h3>
+            </div>
 
 
             <p id="signal-description">
                 Waiting for high-quality market confirmation...
             </p>
 
+
+            <div class="signal-tags">
+
+
+                <span
+                    id="signal-direction"
+                    class="signal-tag"
+                >
+                    NO TRADE
+                </span>
+
+
+                <span
+                    id="signal-quality"
+                    class="signal-tag"
+                >
+                    ANALYZING
+                </span>
+
+
+            </div>
+
+
         </div>
 
 
 
+        <!-- =================================================
+             SIGNAL CONFIDENCE
+        ================================================== -->
+
         <div class="signal-confidence">
 
-            <span>
-                SIGNAL STRENGTH
-            </span>
 
-
-            <div class="confidence-value">
-
-                <strong id="signal-strength">
-                    --
-                </strong>
+            <div class="confidence-header">
 
                 <span>
-                    / 100
+                    SIGNAL STRENGTH
                 </span>
+
+                <strong>
+
+                    <b id="signal-strength">
+                        0
+                    </b>
+
+                    <small>
+                        / 100
+                    </small>
+
+                </strong>
 
             </div>
 
 
             <div class="confidence-bar">
 
-                <div id="confidence-fill"></div>
+                <div
+                    id="confidence-fill"
+                    class="confidence-fill"
+                ></div>
 
             </div>
+
+
+            <div class="confidence-footer">
+
+                <span>
+                    ENGINE STATUS
+                </span>
+
+                <strong id="signal-engine-status">
+                    ANALYZING
+                </strong>
+
+            </div>
+
 
         </div>
 
@@ -360,36 +692,64 @@
 
 
 
-    <!-- ================================================
-         TRADE LEVELS
-    ================================================= -->
+    <!-- =====================================================
+         ENTRY / SL / TP LEVELS
+    ====================================================== -->
 
-    <div class="trade-levels">
+    <div class="trade-levels-grid">
 
 
-        <div class="level-card entry-level">
+        <!-- ENTRY -->
 
-            <span>
-                ENTRY
-            </span>
+        <div class="trade-level-card entry-level">
+
+            <div class="level-top">
+
+                <span>
+                    ENTRY
+                </span>
+
+                <i>
+                    E
+                </i>
+
+            </div>
+
 
             <strong id="signal-entry">
                 --
             </strong>
 
+
+            <small id="signal-entry-zone">
+                WAITING
+            </small>
+
         </div>
 
 
 
-        <div class="level-card stop-level">
+        <!-- STOP LOSS -->
 
-            <span>
-                STOP LOSS
-            </span>
+        <div class="trade-level-card sl-level">
+
+            <div class="level-top">
+
+                <span>
+                    STOP LOSS
+                </span>
+
+                <i>
+                    SL
+                </i>
+
+            </div>
+
 
             <strong id="signal-sl">
                 --
             </strong>
+
 
             <small id="signal-sl-pips">
                 -- PIPS
@@ -399,15 +759,27 @@
 
 
 
-        <div class="level-card tp-level">
+        <!-- TP1 -->
 
-            <span>
-                TAKE PROFIT 1
-            </span>
+        <div class="trade-level-card tp-level">
+
+            <div class="level-top">
+
+                <span>
+                    TAKE PROFIT 1
+                </span>
+
+                <i>
+                    TP1
+                </i>
+
+            </div>
+
 
             <strong id="signal-tp1">
                 --
             </strong>
+
 
             <small id="signal-tp1-pips">
                 -- PIPS
@@ -417,15 +789,27 @@
 
 
 
-        <div class="level-card tp-level">
+        <!-- TP2 -->
 
-            <span>
-                TAKE PROFIT 2
-            </span>
+        <div class="trade-level-card tp-level">
+
+            <div class="level-top">
+
+                <span>
+                    TAKE PROFIT 2
+                </span>
+
+                <i>
+                    TP2
+                </i>
+
+            </div>
+
 
             <strong id="signal-tp2">
                 --
             </strong>
+
 
             <small id="signal-tp2-pips">
                 -- PIPS
@@ -435,15 +819,27 @@
 
 
 
-        <div class="level-card tp-level">
+        <!-- TP3 -->
 
-            <span>
-                TAKE PROFIT 3
-            </span>
+        <div class="trade-level-card tp-level">
+
+            <div class="level-top">
+
+                <span>
+                    TAKE PROFIT 3
+                </span>
+
+                <i>
+                    TP3
+                </i>
+
+            </div>
+
 
             <strong id="signal-tp3">
                 --
             </strong>
+
 
             <small id="signal-tp3-pips">
                 -- PIPS
@@ -454,18 +850,301 @@
 
     </div>
 
+
 </section>
 
 
 
-<!-- =====================================================
+<!-- =========================================================
+     SIGNAL CONFIRMATION MATRIX
+========================================================= -->
+
+<section class="confirmation-section">
+
+
+    <div class="section-heading">
+
+
+        <div>
+
+            <span class="section-kicker">
+                MULTI-FACTOR VALIDATION
+            </span>
+
+            <h2>
+                Signal Confirmation Matrix
+            </h2>
+
+        </div>
+
+
+        <div class="confirmation-score-box">
+
+            <span>
+                TOTAL SCORE
+            </span>
+
+            <strong id="confirmation-score">
+                0
+            </strong>
+
+            <small>
+                / 100
+            </small>
+
+        </div>
+
+
+    </div>
+
+
+
+    <div class="confirmation-grid">
+
+
+        <!-- TREND -->
+
+        <div class="confirmation-card">
+
+            <div class="confirmation-top">
+
+                <span>
+                    TREND
+                </span>
+
+                <strong
+                    id="confirm-trend"
+                    class="confirm-neutral"
+                >
+                    WAITING
+                </strong>
+
+            </div>
+
+
+            <div class="confirmation-progress">
+
+                <div
+                    id="confirm-trend-bar"
+                    class="confirmation-fill"
+                ></div>
+
+            </div>
+
+
+            <small id="confirm-trend-score">
+                0 / 20
+            </small>
+
+        </div>
+
+
+
+        <!-- STRUCTURE -->
+
+        <div class="confirmation-card">
+
+            <div class="confirmation-top">
+
+                <span>
+                    STRUCTURE
+                </span>
+
+                <strong
+                    id="confirm-structure"
+                    class="confirm-neutral"
+                >
+                    WAITING
+                </strong>
+
+            </div>
+
+
+            <div class="confirmation-progress">
+
+                <div
+                    id="confirm-structure-bar"
+                    class="confirmation-fill"
+                ></div>
+
+            </div>
+
+
+            <small id="confirm-structure-score">
+                0 / 20
+            </small>
+
+        </div>
+
+
+
+        <!-- MOMENTUM -->
+
+        <div class="confirmation-card">
+
+            <div class="confirmation-top">
+
+                <span>
+                    MOMENTUM
+                </span>
+
+                <strong
+                    id="confirm-momentum"
+                    class="confirm-neutral"
+                >
+                    WAITING
+                </strong>
+
+            </div>
+
+
+            <div class="confirmation-progress">
+
+                <div
+                    id="confirm-momentum-bar"
+                    class="confirmation-fill"
+                ></div>
+
+            </div>
+
+
+            <small id="confirm-momentum-score">
+                0 / 15
+            </small>
+
+        </div>
+
+
+
+        <!-- PRICE ACTION -->
+
+        <div class="confirmation-card">
+
+            <div class="confirmation-top">
+
+                <span>
+                    PRICE ACTION
+                </span>
+
+                <strong
+                    id="confirm-price-action"
+                    class="confirm-neutral"
+                >
+                    WAITING
+                </strong>
+
+            </div>
+
+
+            <div class="confirmation-progress">
+
+                <div
+                    id="confirm-price-action-bar"
+                    class="confirmation-fill"
+                ></div>
+
+            </div>
+
+
+            <small id="confirm-price-action-score">
+                0 / 15
+            </small>
+
+        </div>
+
+
+
+        <!-- SUPPORT RESISTANCE -->
+
+        <div class="confirmation-card">
+
+            <div class="confirmation-top">
+
+                <span>
+                    SUPPORT / RESISTANCE
+                </span>
+
+                <strong
+                    id="confirm-sr"
+                    class="confirm-neutral"
+                >
+                    WAITING
+                </strong>
+
+            </div>
+
+
+            <div class="confirmation-progress">
+
+                <div
+                    id="confirm-sr-bar"
+                    class="confirmation-fill"
+                ></div>
+
+            </div>
+
+
+            <small id="confirm-sr-score">
+                0 / 15
+            </small>
+
+        </div>
+
+
+
+        <!-- VOLATILITY -->
+
+        <div class="confirmation-card">
+
+            <div class="confirmation-top">
+
+                <span>
+                    VOLATILITY
+                </span>
+
+                <strong
+                    id="confirm-volatility"
+                    class="confirm-neutral"
+                >
+                    WAITING
+                </strong>
+
+            </div>
+
+
+            <div class="confirmation-progress">
+
+                <div
+                    id="confirm-volatility-bar"
+                    class="confirmation-fill"
+                ></div>
+
+            </div>
+
+
+            <small id="confirm-volatility-score">
+                0 / 15
+            </small>
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+
+<!-- =========================================================
      LIVE MARKET ANALYSIS
-====================================================== -->
+========================================================= -->
 
 <section class="analysis-section">
 
 
     <div class="section-heading">
+
 
         <div>
 
@@ -477,7 +1156,12 @@
                 Live Market Analysis
             </h2>
 
+            <p>
+                Technical and price-action interpretation
+            </p>
+
         </div>
+
 
     </div>
 
@@ -486,621 +1170,25 @@
     <div class="analysis-grid">
 
 
-        <div class="analysis-card">
+        <!-- =================================================
+             TREND ENGINE
+        ================================================== -->
 
-            <div class="analysis-card-header">
-
-                <span>
-                    TREND ENGINE
-                </span>
-
-                <span id="trend-status"
-                      class="indicator-status">
-                    --
-                </span>
-
-            </div>
-
-            <h3 id="trend-analysis">
-                Analyzing market trend...
-            </h3>
-
-            <p id="trend-detail">
-                --
-            </p>
-
-        </div>
+        <article class="analysis-card">
 
 
-
-        <div class="analysis-card">
-
-            <div class="analysis-card-header">
-
-                <span>
-                    SUPPORT / RESISTANCE
-                </span>
-
-                <span id="sr-status"
-                      class="indicator-status">
-                    --
-                </span>
-
-            </div>
-
-            <h3 id="sr-analysis">
-                Detecting key levels...
-            </h3>
-
-            <p id="sr-detail">
-                --
-            </p>
-
-        </div>
+            <div class=
 
 
-
-        <div class="analysis-card">
-
-            <div class="analysis-card-header">
-
-                <span>
-                    MOMENTUM
-                </span>
-
-                <span id="momentum-status"
-                      class="indicator-status">
-                    --
-                </span>
-
-            </div>
-
-            <h3 id="momentum-analysis">
-                Measuring momentum...
-            </h3>
-
-            <p id="momentum-detail">
-                --
-            </p>
-
-        </div>
-
-
-
-        <div class="analysis-card">
-
-            <div class="analysis-card-header">
-
-                <span>
-                    SMART MONEY
-                </span>
-
-                <span id="smc-status"
-                      class="indicator-status">
-                    --
-                </span>
-
-            </div>
-
-            <h3 id="smc-analysis">
-                Searching market structure...
-            </h3>
-
-            <p id="smc-detail">
-                --
-            </p>
-
-        </div>
-
-
-    </div>
-
-</section>
-
+                <!-- =====================================================
+     HTML PART 2 — CONTINUATION
+     QAYYUM OFFICIALZ — XAUUSD INTELLIGENCE
+====================================================== -->
 
 
 <!-- =====================================================
-     INDICATOR MATRIX
+     TRADING CALCULATOR — CONTINUED
 ====================================================== -->
-
-<section class="indicator-section">
-
-    <div class="section-heading">
-
-        <div>
-
-            <span class="section-kicker">
-                MULTI-FACTOR ENGINE
-            </span>
-
-            <h2>
-                Technical Intelligence
-            </h2>
-
-        </div>
-
-    </div>
-
-
-    <div class="indicator-grid">
-
-
-        <div class="indicator-card">
-            <span>RSI</span>
-            <strong id="indicator-rsi">--</strong>
-        </div>
-
-
-        <div class="indicator-card">
-            <span>EMA 20</span>
-            <strong id="indicator-ema20">--</strong>
-        </div>
-
-
-        <div class="indicator-card">
-            <span>EMA 50</span>
-            <strong id="indicator-ema50">--</strong>
-        </div>
-
-
-        <div class="indicator-card">
-            <span>EMA 200</span>
-            <strong id="indicator-ema200">--</strong>
-        </div>
-
-
-        <div class="indicator-card">
-            <span>MACD</span>
-            <strong id="indicator-macd">--</strong>
-        </div>
-
-
-        <div class="indicator-card">
-            <span>ADX</span>
-            <strong id="indicator-adx">--</strong>
-        </div>
-
-
-        <div class="indicator-card">
-            <span>ATR</span>
-            <strong id="indicator-atr">--</strong>
-        </div>
-
-
-        <div class="indicator-card">
-            <span>VWAP</span>
-            <strong id="indicator-vwap">--</strong>
-        </div>
-
-
-    </div>
-
-  </section>
-
-
-
-
-
-
-<!-- =====================================================
-     LIVE GOLD CHART
-====================================================== -->
-
-<section class="chart-section">
-
-    <div class="section-heading">
-
-        <div>
-
-            <span class="section-kicker">
-                LIVE PRICE ACTION
-            </span>
-
-            <h2>
-                XAUUSD Market Chart
-            </h2>
-
-        </div>
-
-
-        <div class="chart-controls">
-
-            <button class="timeframe-btn active"
-                    data-timeframe="5m">
-                5M
-            </button>
-
-            <button class="timeframe-btn"
-                    data-timeframe="15m">
-                15M
-            </button>
-
-            <button class="timeframe-btn"
-                    data-timeframe="30m">
-                30M
-            </button>
-
-            <button class="timeframe-btn"
-                    data-timeframe="1h">
-                1H
-            </button>
-
-            <button class="timeframe-btn"
-                    data-timeframe="2h">
-                2H
-            </button>
-
-        </div>
-
-    </div>
-
-
-
-    <div class="chart-wrapper">
-
-        <div class="chart-status">
-
-            <span class="live-dot"></span>
-
-            <span id="chart-status">
-                LIVE ANALYSIS
-            </span>
-
-        </div>
-
-
-        <canvas id="gold-chart"></canvas>
-
-
-        <!-- =============================================
-             LIVE CHART LEVELS
-        ============================================== -->
-
-        <div id="chart-levels">
-
-            <div id="chart-support"
-                 class="chart-level support-line">
-
-                <span>
-                    SUPPORT
-                </span>
-
-                <strong>
-                    --
-                </strong>
-
-            </div>
-
-
-            <div id="chart-resistance"
-                 class="chart-level resistance-line">
-
-                <span>
-                    RESISTANCE
-                </span>
-
-                <strong>
-                    --
-                </strong>
-
-            </div>
-
-
-            <div id="chart-entry"
-                 class="chart-level entry-line">
-
-                <span>
-                    ENTRY
-                </span>
-
-                <strong>
-                    --
-                </strong>
-
-            </div>
-
-
-            <div id="chart-sl"
-                 class="chart-level sl-line">
-
-                <span>
-                    SL
-                </span>
-
-                <strong>
-                    --
-                </strong>
-
-            </div>
-
-
-            <div id="chart-tp"
-                 class="chart-level tp-line">
-
-                <span>
-                    TP
-                </span>
-
-                <strong>
-                    --
-                </strong>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- =============================================
-         CHART MARKET DATA
-    ============================================== -->
-
-    <div class="chart-info-grid">
-
-
-        <div>
-            <span>High</span>
-            <strong id="chart-high">--</strong>
-        </div>
-
-
-        <div>
-            <span>Low</span>
-            <strong id="chart-low">--</strong>
-        </div>
-
-
-        <div>
-            <span>Open</span>
-            <strong id="chart-open">--</strong>
-        </div>
-
-
-        <div>
-            <span>Volume</span>
-            <strong id="chart-volume">--</strong>
-        </div>
-
-
-        <div>
-            <span>Trend</span>
-            <strong id="chart-trend">--</strong>
-        </div>
-
-
-        <div>
-            <span>Structure</span>
-            <strong id="chart-structure">--</strong>
-        </div>
-
-
-    </div>
-
-</section>
-
-
-
-<!-- =====================================================
-     MARKET STRUCTURE DETECTION
-====================================================== -->
-
-<section class="structure-section">
-
-    <div class="section-heading">
-
-        <div>
-
-            <span class="section-kicker">
-                PRICE ACTION ENGINE
-            </span>
-
-            <h2>
-                Market Structure
-            </h2>
-
-        </div>
-
-    </div>
-
-
-    <div class="structure-grid">
-
-
-        <div class="structure-card">
-
-            <span>
-                CURRENT STRUCTURE
-            </span>
-
-            <strong id="market-structure">
-                Analyzing...
-            </strong>
-
-            <p id="structure-description">
-                Waiting for structure confirmation.
-            </p>
-
-        </div>
-
-
-        <div class="structure-card">
-
-            <span>
-                SUPPORT ZONE
-            </span>
-
-            <strong id="support-zone">
-                --
-            </strong>
-
-            <p id="support-distance">
-                --
-            </p>
-
-        </div>
-
-
-        <div class="structure-card">
-
-            <span>
-                RESISTANCE ZONE
-            </span>
-
-            <strong id="resistance-zone">
-                --
-            </strong>
-
-            <p id="resistance-distance">
-                --
-            </p>
-
-        </div>
-
-
-        <div class="structure-card">
-
-            <span>
-                PATTERN
-            </span>
-
-            <strong id="detected-pattern">
-                None
-            </strong>
-
-            <p id="pattern-description">
-                No confirmed pattern yet.
-            </p>
-
-        </div>
-
-
-    </div>
-
-</section>
-
-
-
-<!-- =====================================================
-     TRADING CALCULATOR
-====================================================== -->
-
-<section class="calculator-section">
-
-
-    <div class="section-heading">
-
-        <div>
-
-            <span class="section-kicker">
-                RISK & REWARD
-            </span>
-
-            <h2>
-                Gold Trading Calculator
-            </h2>
-
-        </div>
-
-    </div>
-
-
-
-    <div class="calculator-box">
-
-
-        <!-- =============================================
-             TRADE DIRECTION
-        ============================================== -->
-
-        <div class="input-group">
-
-            <label for="calculator-direction">
-                Trade Direction
-            </label>
-
-            <select id="calculator-direction">
-
-                <option value="BUY">
-                    BUY / LONG
-                </option>
-
-                <option value="SELL">
-                    SELL / SHORT
-                </option>
-
-            </select>
-
-        </div>
-
-
-
-        <!-- =============================================
-             LOT SIZE
-        ============================================== -->
-
-        <div class="input-group">
-
-            <label for="lot-size">
-                Lot Size
-            </label>
-
-            <input
-                type="number"
-                id="lot-size"
-                min="0.01"
-                step="0.01"
-                value="0.01"
-                placeholder="Example: 0.01">
-
-        </div>
-
-
-
-        <!-- =============================================
-             ENTRY PRICE
-        ============================================== -->
-
-        <div class="input-group">
-
-            <label for="calculator-entry">
-                Entry Price
-            </label>
-
-            <input
-                type="number"
-                id="calculator-entry"
-                step="0.01"
-                placeholder="Example: 5000.00">
-
-        </div>
-
-
-
-        <!-- =============================================
-             EXIT PRICE
-        ============================================== -->
-
-        <div class="input-group">
-
-            <label for="calculator-exit">
-                Exit Price
-            </label>
-
-            <input
-                type="number"
-                id="calculator-exit"
-                step="0.01"
-                placeholder="Example: 5010.00">
-
-        </div>
-
-
-
-        <!-- =============================================
-             STOP LOSS
-        ============================================== -->
 
         <div class="input-group">
 
@@ -1117,11 +1205,6 @@
         </div>
 
 
-
-        <!-- =============================================
-             TAKE PROFIT
-        ============================================== -->
-
         <div class="input-group">
 
             <label for="calculator-tp">
@@ -1137,25 +1220,31 @@
         </div>
 
 
+        <div class="calculator-actions">
 
-        <button
-            id="calculate-trade"
-            type="button">
+            <button
+                id="calculate-trade"
+                class="primary-action">
 
-            CALCULATE TRADE
+                CALCULATE TRADE
 
-        </button>
+            </button>
+
+            <button
+                id="use-live-price"
+                class="secondary-action">
+
+                USE LIVE PRICE
+
+            </button>
+
+        </div>
 
 
-
-        <!-- =============================================
-             CALCULATOR RESULT
-        ============================================== -->
-
-        <div class="calculator-result">
+        <div class="calculator-results">
 
 
-            <div class="result-card">
+            <div class="calculator-result">
 
                 <span>
                     PRICE MOVE
@@ -1168,7 +1257,7 @@
             </div>
 
 
-            <div class="result-card">
+            <div class="calculator-result">
 
                 <span>
                     PIPS
@@ -1181,46 +1270,41 @@
             </div>
 
 
-            <div class="result-card profit-result">
+            <div class="calculator-result">
 
                 <span>
-                    PROFIT / LOSS
+                    POTENTIAL PROFIT
                 </span>
 
-                <strong id="calc-profit">
+                <strong
+                    id="calc-profit"
+                    class="win-text">
+
                     --
+
                 </strong>
 
             </div>
 
 
-            <div class="result-card">
+            <div class="calculator-result">
 
                 <span>
-                    RISK
+                    POTENTIAL LOSS
                 </span>
 
-                <strong id="calc-risk">
+                <strong
+                    id="calc-loss"
+                    class="loss-text">
+
                     --
+
                 </strong>
 
             </div>
 
 
-            <div class="result-card">
-
-                <span>
-                    REWARD
-                </span>
-
-                <strong id="calc-reward">
-                    --
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
+            <div class="calculator-result">
 
                 <span>
                     RISK / REWARD
@@ -1235,16 +1319,6 @@
 
         </div>
 
-
-        <p class="calculator-note">
-
-            Gold calculation is based on the platform's
-            XAUUSD pip model:
-            <strong>$1 price move = 10 pips</strong>.
-
-        </p>
-
-
     </div>
 
 </section>
@@ -1252,99 +1326,190 @@
 
 
 <!-- =====================================================
-     SIGNAL HISTORY
+     LIVE MARKET CHART
 ====================================================== -->
 
-<section class="history-section">
-
+<section class="chart-section">
 
     <div class="section-heading">
 
         <div>
 
             <span class="section-kicker">
-                TRADE RECORDS
+                LIVE PRICE ACTION
             </span>
 
             <h2>
-                Previous Signals
+                XAUUSD Technical Chart
             </h2>
 
         </div>
 
 
-        <button
-            id="history-btn"
-            type="button">
+        <div class="chart-controls">
 
-            VIEW HISTORY
+            <button
+                class="timeframe-btn active"
+                data-timeframe="5m">
 
-        </button>
+                5M
+
+            </button>
+
+
+            <button
+                class="timeframe-btn"
+                data-timeframe="15m">
+
+                15M
+
+            </button>
+
+
+            <button
+                class="timeframe-btn"
+                data-timeframe="30m">
+
+                30M
+
+            </button>
+
+
+            <button
+                class="timeframe-btn"
+                data-timeframe="1h">
+
+                1H
+
+            </button>
+
+
+            <button
+                class="timeframe-btn"
+                data-timeframe="2h">
+
+                2H
+
+            </button>
+
+        </div>
 
     </div>
 
 
+    <div class="chart-wrapper">
 
-    <div id="trade-history"
-         class="history-container hidden">
+        <div class="chart-topbar">
 
+            <div class="chart-live-status">
 
-        <div class="history-header">
+                <span class="live-dot"></span>
 
-            <span>
-                SIGNAL
-            </span>
+                <span id="chart-status">
+                    LIVE MARKET DATA
+                </span>
 
-            <span>
-                ENTRY
-            </span>
-
-            <span>
-                RESULT
-            </span>
-
-            <span>
-                STATUS
-            </span>
-
-        </div>
+            </div>
 
 
-        <div id="history-list">
+            <div class="chart-current-price">
 
-            <div class="empty-history">
+                <span>
+                    XAUUSD
+                </span>
 
-                No previous signals yet.
+                <strong id="chart-current-price">
+                    --
+                </strong>
 
             </div>
 
         </div>
 
 
-    </div>
-
-</section>
+        <canvas id="gold-chart"></canvas>
 
 
+        <!-- =============================================
+             CHART LEVELS
+        ============================================== -->
 
-<!-- =====================================================
-     SIGNAL QUALITY DASHBOARD
-====================================================== -->
-
-<section class="quality-section">
+        <div id="chart-levels">
 
 
-    <div class="section-heading">
+            <div
+                id="chart-support"
+                class="chart-level support-line">
 
-        <div>
+                <span>
+                    SUPPORT
+                </span>
 
-            <span class="section-kicker">
-                SYSTEM ACTIVITY
-            </span>
+                <strong>
+                    --
+                </strong>
 
-            <h2>
-                Signal Dashboard
-            </h2>
+            </div>
+
+
+            <div
+                id="chart-resistance"
+                class="chart-level resistance-line">
+
+                <span>
+                    RESISTANCE
+                </span>
+
+                <strong>
+                    --
+                </strong>
+
+            </div>
+
+
+            <div
+                id="chart-entry"
+                class="chart-level entry-line">
+
+                <span>
+                    ENTRY
+                </span>
+
+                <strong>
+                    --
+                </strong>
+
+            </div>
+
+
+            <div
+                id="chart-sl"
+                class="chart-level sl-line">
+
+                <span>
+                    STOP LOSS
+                </span>
+
+                <strong>
+                    --
+                </strong>
+
+            </div>
+
+
+            <div
+                id="chart-tp"
+                class="chart-level tp-line">
+
+                <span>
+                    TAKE PROFIT
+                </span>
+
+                <strong>
+                    --
+                </strong>
+
+            </div>
 
         </div>
 
@@ -1352,10 +1517,123 @@
 
 
 
-    <div class="quality-grid">
+    <!-- =================================================
+         CHART INFORMATION
+    ================================================== -->
+
+    <div class="chart-info-grid">
 
 
-        <div class="quality-card">
+        <div>
+
+            <span>
+                OPEN
+            </span>
+
+            <strong id="chart-open">
+                --
+            </strong>
+
+        </div>
+
+
+        <div>
+
+            <span>
+                HIGH
+            </span>
+
+            <strong id="chart-high">
+                --
+            </strong>
+
+        </div>
+
+
+        <div>
+
+            <span>
+                LOW
+            </span>
+
+            <strong id="chart-low">
+                --
+            </strong>
+
+        </div>
+
+
+        <div>
+
+            <span>
+                VOLUME
+            </span>
+
+            <strong id="chart-volume">
+                --
+            </strong>
+
+        </div>
+
+
+        <div>
+
+            <span>
+                TREND
+            </span>
+
+            <strong id="chart-trend">
+                --
+            </strong>
+
+        </div>
+
+
+        <div>
+
+            <span>
+                STRUCTURE
+            </span>
+
+            <strong id="chart-structure">
+                --
+            </strong>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     TRADING DASHBOARD
+====================================================== -->
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+
+        <div>
+
+            <span class="section-kicker">
+                PERFORMANCE CONTROL
+            </span>
+
+            <h2>
+                Trading Dashboard
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <div class="dashboard-grid">
+
+
+        <div class="dashboard-card">
 
             <span>
                 TOTAL SIGNALS
@@ -1368,70 +1646,99 @@
         </div>
 
 
-        <div class="quality-card">
+        <div class="dashboard-card">
 
             <span>
-                LONG SIGNALS
+                WINS
             </span>
 
-            <strong id="long-signals">
+            <strong
+                id="total-wins"
+                class="win-text">
+
+                0
+
+            </strong>
+
+        </div>
+
+
+        <div class="dashboard-card">
+
+            <span>
+                LOSSES
+            </span>
+
+            <strong
+                id="total-losses"
+                class="loss-text">
+
+                0
+
+            </strong>
+
+        </div>
+
+
+        <div class="dashboard-card">
+
+            <span>
+                WIN RATE
+            </span>
+
+            <strong id="win-rate">
+                0%
+            </strong>
+
+        </div>
+
+
+        <div class="dashboard-card">
+
+            <span>
+                NET PIPS
+            </span>
+
+            <strong id="net-pips">
                 0
             </strong>
 
         </div>
 
 
-        <div class="quality-card">
+        <div class="dashboard-card">
 
             <span>
-                SHORT SIGNALS
+                PROFIT FACTOR
             </span>
 
-            <strong id="short-signals">
-                0
+            <strong id="profit-factor">
+                --
             </strong>
 
         </div>
 
-
-        <div class="quality-card">
-
-            <span>
-                WINNING TRADES
-            </span>
-
-            <strong id="winning-trades">
-                0
-            </strong>
-
-        </div>
+    </div>
 
 
-        <div class="quality-card">
+    <div class="dashboard-actions">
 
-            <span>
-                LOSING TRADES
-            </span>
+        <button
+            id="view-history-btn"
+            class="primary-action">
 
-            <strong id="losing-trades">
-                0
-            </strong>
+            VIEW TRADE HISTORY
 
-        </div>
+        </button>
 
 
-        <div class="quality-card">
+        <button
+            id="clear-history-btn"
+            class="secondary-action">
 
-            <span>
-                CURRENT STATUS
-            </span>
+            RESET HISTORY
 
-            <strong id="system-status">
-                SCANNING
-            </strong>
-
-        </div>
-
+        </button>
 
     </div>
 
@@ -1440,51 +1747,191 @@
 
 
 <!-- =====================================================
-     ENGINE STATUS
+     TRADE HISTORY
 ====================================================== -->
 
-<section class="engine-section">
+<section
+    id="trade-history-section"
+    class="history-section hidden">
 
+    <div class="section-heading">
 
-    <div class="engine-card">
-
-
-        <div class="engine-icon">
-            Q
-        </div>
-
-
-        <div class="engine-content">
+        <div>
 
             <span class="section-kicker">
-                QAYYUM OFFICIALZ ENGINE
+                EXECUTION RECORD
             </span>
 
             <h2>
-                Multi-Factor Gold Intelligence
+                Previous Trades
             </h2>
 
+        </div>
+
+    </div>
+
+
+    <div class="history-table-wrapper">
+
+        <table class="history-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        DATE
+                    </th>
+
+                    <th>
+                        SIGNAL
+                    </th>
+
+                    <th>
+                        ENTRY
+                    </th>
+
+                    <th>
+                        SL
+                    </th>
+
+                    <th>
+                        TP
+                    </th>
+
+                    <th>
+                        RESULT
+                    </th>
+
+                    <th>
+                        PIPS
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="trade-history-body">
+
+                <tr>
+
+                    <td
+                        colspan="7"
+                        class="empty-history">
+
+                        No previous trades available.
+
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     RISK MANAGEMENT
+====================================================== -->
+
+<section class="risk-section">
+
+    <div class="section-heading">
+
+        <div>
+
+            <span class="section-kicker">
+                CAPITAL PROTECTION
+            </span>
+
+            <h2>
+                Risk Management
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <div class="risk-grid">
+
+
+        <div class="risk-card">
+
+            <span>
+                RECOMMENDED RISK
+            </span>
+
+            <strong id="risk-percent">
+                1%
+            </strong>
+
             <p>
-                The analysis engine evaluates multiple market
-                conditions before generating a trade setup.
-                Signals are designed to prioritize quality,
-                confirmation and controlled risk instead of
-                generating unnecessary trades.
+                Maximum recommended account risk
+                per high-quality signal.
             </p>
 
         </div>
 
 
-        <div class="engine-status">
+        <div class="risk-card">
 
-            <span class="status-dot"></span>
+            <span>
+                MAX STOP
+            </span>
 
-            <strong id="engine-status">
-                ONLINE
+            <strong id="risk-sl">
+                70 PIPS
             </strong>
+
+            <p>
+                Stop distance is volatility adjusted
+                and capped by the risk engine.
+            </p>
 
         </div>
 
+
+        <div class="risk-card">
+
+            <span>
+                TARGET MODEL
+            </span>
+
+            <strong id="risk-reward">
+                1 : 2+
+            </strong>
+
+            <p>
+                The engine prefers asymmetric
+                reward-to-risk opportunities.
+            </p>
+
+        </div>
+
+
+        <div class="risk-card">
+
+            <span>
+                SIGNAL QUALITY
+            </span>
+
+            <strong id="risk-quality">
+                WAITING
+            </strong>
+
+            <p>
+                No trade is preferred when
+                confirmation is weak.
+            </p>
+
+        </div>
 
     </div>
 
@@ -1493,32 +1940,223 @@
 
 
 <!-- =====================================================
-     DISCLAIMER
+     MULTI-TIMEFRAME SUMMARY
 ====================================================== -->
 
-<section class="disclaimer-section">
+<section class="technical-summary-section">
 
+    <div class="section-heading">
 
-    <div class="disclaimer-box">
+        <div>
 
-        <span>
-            RISK NOTICE
-        </span>
+            <span class="section-kicker">
+                MULTI-TIMEFRAME CONFIRMATION
+            </span>
 
-        <p>
+            <h2>
+                Technical Summary
+            </h2>
 
-            This platform provides technical market analysis
-            and educational information only. Trading gold,
-            forex and leveraged products involves significant
-            risk. Always manage position size and risk
-            responsibly.
-
-        </p>
+        </div>
 
     </div>
 
 
+    <div class="technical-summary-grid">
+
+
+        <div class="technical-summary-card">
+
+            <span>
+                5 MINUTE
+            </span>
+
+            <strong id="tf-5m">
+                WAITING
+            </strong>
+
+            <p id="tf-5m-detail">
+                Waiting for candle data.
+            </p>
+
+        </div>
+
+
+        <div class="technical-summary-card">
+
+            <span>
+                15 MINUTE
+            </span>
+
+            <strong id="tf-15m">
+                WAITING
+            </strong>
+
+            <p id="tf-15m-detail">
+                Primary signal timeframe.
+            </p>
+
+        </div>
+
+
+        <div class="technical-summary-card">
+
+            <span>
+                1 HOUR
+            </span>
+
+            <strong id="tf-1h">
+                WAITING
+            </strong>
+
+            <p id="tf-1h-detail">
+                Higher timeframe confirmation.
+            </p>
+
+        </div>
+
+
+        <div class="technical-summary-card">
+
+            <span>
+                OVERALL BIAS
+            </span>
+
+            <strong id="overall-bias">
+                NEUTRAL
+            </strong>
+
+            <p id="overall-bias-detail">
+                Waiting for multi-factor confirmation.
+            </p>
+
+        </div>
+
+    </div>
+
 </section>
+
+
+
+<!-- =====================================================
+     SIGNAL ENGINE CONSOLE
+====================================================== -->
+
+<section class="engine-section">
+
+    <div class="section-heading">
+
+        <div>
+
+            <span class="section-kicker">
+                INTELLIGENCE MONITOR
+            </span>
+
+            <h2>
+                Signal Engine Activity
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <div class="engine-console">
+
+
+        <div class="console-header">
+
+            <div class="console-title">
+
+                <span class="console-dot"></span>
+
+                <span>
+                    LIVE ENGINE
+                </span>
+
+            </div>
+
+
+            <span id="engine-time">
+                --:--:--
+            </span>
+
+        </div>
+
+
+        <div
+            id="engine-log"
+            class="engine-log">
+
+            <div class="log-line">
+
+                <span class="log-time">
+                    --:--:--
+                </span>
+
+                <span class="log-message">
+                    Initializing XAUUSD intelligence engine...
+                </span>
+
+            </div>
+
+
+            <div class="log-line">
+
+                <span class="log-time">
+                    --:--:--
+                </span>
+
+                <span class="log-message">
+                    Waiting for live market data...
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     SIGNAL ALERT
+====================================================== -->
+
+<div
+    id="signal-alert"
+    class="signal-alert">
+
+
+    <div class="alert-icon">
+        !
+    </div>
+
+
+    <div class="alert-content">
+
+        <strong id="alert-title">
+            Market Update
+        </strong>
+
+        <span id="alert-message">
+            Waiting for signal confirmation.
+        </span>
+
+    </div>
+
+
+    <button
+        id="alert-close"
+        class="alert-close">
+
+        ×
+
+    </button>
+
+</div>
 
 
 
@@ -1526,53 +2164,44 @@
      FOOTER
 ====================================================== -->
 
-<footer class="footer">
+<footer class="app-footer">
 
 
     <div class="footer-brand">
-
-        <div class="brand-mark">
-            Q
-        </div>
-
-        <h2>
-            QAYYUM OFFICIALZ
-        </h2>
-
-        <p>
-            XAUUSD Market Intelligence
-        </p>
-
+        QAYYUM OFFICIALZ
     </div>
 
 
-
-    <div class="footer-divider"></div>
-
-
-
-    <p class="footer-copy">
-
-        Trade With Data.
-        Trade With Discipline.
-
+    <p>
+        XAUUSD Gold Intelligence Terminal
     </p>
 
 
+    <p class="footer-warning">
+        Market signals are analytical outputs.
+        No signal can guarantee a profitable trade.
+        Always control position size and risk.
+    </p>
 
-    <p class="footer-version">
 
-        XAU Intelligence Engine
-        <span id="app-version">
-            v1.0
+    <div class="footer-status">
+
+        <span class="status-dot"></span>
+
+        <span id="footer-status">
+            ENGINE INITIALIZING
         </span>
 
-    </p>
+    </div>
 
 
 </footer>
 
 
+
+<!-- =====================================================
+     APP END
+====================================================== -->
 
 </main>
 
@@ -1587,5 +2216,4 @@
 
 </body>
 
-  </html>
-  
+                </html>
